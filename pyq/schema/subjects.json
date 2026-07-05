@@ -1,0 +1,24 @@
+{
+  "$comment": "Canonical subject codes used across all question JSON files. Note: user's original list had 'pysch' which is corrected here to 'psychiatry' (assumed typo).",
+  "subjects": [
+    "anatomy",
+    "biochemistry",
+    "physiology",
+    "pharmacology",
+    "pathology",
+    "microbiology",
+    "fmt",
+    "psm",
+    "ophthalmology",
+    "ent",
+    "medicine",
+    "surgery",
+    "obgyn",
+    "pediatrics",
+    "anaesthesia",
+    "psychiatry",
+    "orthopedics",
+    "dermatology",
+    "radiology"
+  ]
+}

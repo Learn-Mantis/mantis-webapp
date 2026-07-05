@@ -1,0 +1,30 @@
+{
+  "id": "neetpg-2024-q001",
+  "exam": "neetpg",
+  "year": 2024,
+  "session": null,
+  "question": "SAMPLE — replace with actual question text.",
+  "attachment": [
+    {
+      "type": "image",
+      "path": "assets/neetpg-2024-q001-fig1.png",
+      "caption": "SAMPLE — e.g. clinical photograph / X-ray / diagram referenced in the question."
+    }
+  ],
+  "options": {
+    "A": "SAMPLE option A",
+    "B": "SAMPLE option B",
+    "C": "SAMPLE option C",
+    "D": "SAMPLE option D"
+  },
+  "correct_option": "A",
+  "explanation": {
+    "text": "SAMPLE — explain why A is correct and why B, C, D are wrong.",
+    "attachments": []
+  },
+  "subject": ["medicine"],
+  "topic": ["SAMPLE topic"],
+  "subtopic": ["SAMPLE subtopic"],
+  "difficulty": 3,
+  "tags": ["recall-based"]
+}

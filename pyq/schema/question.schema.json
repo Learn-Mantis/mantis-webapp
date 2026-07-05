@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/greenfeast/Medience/pyq/schema/question.schema.json",
+  "title": "PYQ Question",
+  "type": "object",
+  "required": [
+    "id",
+    "exam",
+    "year",
+    "question",
+    "options",
+    "correct_option",
+    "explanation",
+    "subject",
+    "topic",
+    "subtopic",
+    "difficulty",
+    "tags"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique question id, e.g. neetpg-2024-q001"
+    },
+    "exam": {
+      "type": "string",
+      "enum": ["neetpg", "inicet"]
+    },
+    "year": {
+      "type": "integer",
+      "minimum": 2000
+    },
+    "session": {
+      "type": ["integer", "null"],
+      "enum": [1, 2, null],
+      "description": "Only applicable to inicet, which runs twice a year. Null for neetpg."
+    },
+    "question": {
+      "type": "string",
+      "description": "The question text."
+    },
+    "attachment": {
+      "type": "array",
+      "description": "Images/diagrams/tables/figures attached to the question stem itself.",
+      "items": {
+        "type": "object",
+        "required": ["type", "path"],
+        "properties": {
+          "type": { "type": "string", "enum": ["image", "table", "diagram", "figure"] },
+          "path": { "type": "string", "description": "Relative path or URL to the asset." },
+          "caption": { "type": "string" }
+        }
+      },
+      "default": []
+    },
+    "options": {
+      "type": "object",
+      "required": ["A", "B", "C", "D"],
+      "properties": {
+        "A": { "type": "string" },
+        "B": { "type": "string" },
+        "C": { "type": "string" },
+        "D": { "type": "string" }
+      }
+    },
+    "correct_option": {
+      "type": "string",
+      "enum": ["A", "B", "C", "D"]
+    },
+    "explanation": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Full explanation: why the correct option is right and why each distractor is wrong."
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "path"],
+            "properties": {
+              "type": { "type": "string", "enum": ["image", "table", "diagram", "figure"] },
+              "path": { "type": "string" },
+              "caption": { "type": "string" }
+            }
+          },
+          "default": []
+        }
+      }
+    },
+    "subject": {
+      "type": "array",
+      "description": "One or more subjects this question belongs to. See schema/subjects.json for the canonical list.",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "topic": {
+      "type": "array",
+      "description": "Topic(s) within the subject(s) above. Must have at least as many entries as 'subject'.",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "subtopic": {
+      "type": "array",
+      "description": "Subtopic(s) within the topic(s) above.",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "difficulty": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "1 = easiest, 5 = hardest."
+    },
+    "tags": {
+      "type": "array",
+      "description": "Question-type tags, e.g. image-based, diagnostic, recall-based, clinical-scenario, one-liner.",
+      "items": { "type": "string" },
+      "default": []
+    }
+  }
+}
