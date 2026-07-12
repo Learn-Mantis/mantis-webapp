@@ -2,3 +2,19 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# Next.js
+/.next/
+/out/
+/build
+.env*.local
+.env
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+/node_modules
+npm-debug.log*
+.DS_Store
+
+# MedMCQA raw dataset
+/data

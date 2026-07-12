@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/greenfeast/Medience/pyq/schema/question.schema.json",
+  "$id": "https://github.com/Learn-Mantis/mantis-webapp/pyq/schema/question.schema.json",
   "title": "PYQ Question",
   "type": "object",
   "required": [

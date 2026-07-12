@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand green scale */
+  --color-brand-50: #eafff1;
+  --color-brand-100: #cffde0;
+  --color-brand-200: #a3f7c4;
+  --color-brand-300: #6bea9d;
+  --color-brand-400: #3ddc7c;
+  --color-brand-500: #22c55e;
+  --color-brand-600: #17a34c;
+  --color-brand-700: #14803f;
+  --color-brand-800: #146536;
+  --color-brand-900: #12532e;
+
+  /* Accents */
+  --color-info-50: #eef4ff;
+  --color-info-400: #5b9dff;
+  --color-info-500: #3b7dfb;
+  --color-info-600: #2563eb;
+
+  --color-gold-50: #fff9e8;
+  --color-gold-400: #ffd23d;
+  --color-gold-500: #f5b301;
+  --color-gold-600: #d99400;
+
+  --color-danger-50: #fff1f1;
+  --color-danger-400: #ff6b6b;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  /* Light surfaces */
+  --color-surface-light: #fbfbf9;
+  --color-surface-light-card: #ffffff;
+  --color-surface-light-muted: #f2f3f1;
+  --color-surface-light-border: #ebece8;
+
+  /* Dark surfaces (charcoal, not pure black) */
+  --color-surface-dark: #14161a;
+  --color-surface-dark-card: #1c1f24;
+  --color-surface-dark-muted: #23262c;
+  --color-surface-dark-border: #2c3038;
+
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 28px;
+
+  --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -8px rgba(16, 24, 40, 0.10);
+  --shadow-soft-dark: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 28px -6px rgba(0, 0, 0, 0.45);
+  --shadow-glow-brand: 0 8px 30px -6px rgba(34, 197, 94, 0.45), 0 0 0 1px rgba(34, 197, 94, 0.08);
+
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-float: float 3.4s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45); }
+    70% { box-shadow: 0 0 0 14px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  }
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    @apply bg-[var(--color-surface-light)] text-neutral-900 transition-colors duration-300;
+    overscroll-behavior-y: none;
+  }
+
+  html.dark body {
+    @apply bg-[var(--color-surface-dark)] text-neutral-50;
+  }
+
+  ::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: color-mix(in srgb, var(--color-surface-light-card) 72%, transparent);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+  }
+  html.dark .glass {
+    background: color-mix(in srgb, var(--color-surface-dark-card) 62%, transparent);
+  }
+
+  .shimmer-bg {
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
+    background-size: 800px 100%;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

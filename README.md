@@ -1,4 +1,4 @@
-# Medience
+# Mantis
 
 Open, structured JSON dataset of previous-year questions (PYQs) for **NEET-PG** and **INI-CET**,
 sourced from publicly available papers and official answer keys.
