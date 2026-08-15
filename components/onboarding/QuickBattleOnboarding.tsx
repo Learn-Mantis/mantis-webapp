@@ -396,6 +396,8 @@ export function QuickBattleOnboarding() {
             batch,
             college: college.trim(),
             phone: phone.trim(),
+            country: 'India',
+            state: 'All India',
             battle_username: finalBattleUsername,
             avatar_key: avatarKey,
             initial_rating: 1000,
