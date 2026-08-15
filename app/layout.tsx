@@ -22,6 +22,11 @@ export const metadata: Metadata = {
   title: 'Mantis — Master medicine, competitively',
   description:
     'QBank, Battle Mode, and Flashcards for medical students. Practice, compete, and retain — in one premium experience.',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 }
 
 export const viewport: Viewport = {

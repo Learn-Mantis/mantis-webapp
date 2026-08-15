@@ -11,13 +11,20 @@ Milestone 1 ships the schema and an ingestion script; you provision the project.
 
 ## 2. Apply the schema
 
-Open **SQL Editor** in the Supabase dashboard and run the contents of
-[`migrations/0001_init.sql`](migrations/0001_init.sql). (Or, with the Supabase CLI:
+Open **SQL Editor** in the Supabase dashboard and run, in order, the contents of
+[`migrations/0001_init.sql`](migrations/0001_init.sql) then
+[`migrations/0002_grants.sql`](migrations/0002_grants.sql). (Or, with the Supabase CLI:
 `supabase link` then `supabase db push`.)
 
-This creates the tables, RLS policies, the privacy-safe `leaderboard_battle` view, and
-the `handle_new_user` trigger that provisions a `profiles` row (and a `battle_profiles`
-row when a battle username was chosen at signup).
+`0001_init.sql` creates the tables, RLS policies, the privacy-safe `leaderboard_battle`
+view, and the `handle_new_user` trigger that provisions a `profiles` row (and a
+`battle_profiles` row when a battle username was chosen at signup).
+
+`0002_grants.sql` is required too: RLS policies alone don't make a table reachable via
+the API — PostgREST also needs the base SQL `GRANT` for the `anon`/`authenticated`/
+`service_role` roles, and this project doesn't inherit Supabase's usual defaults for
+objects created via the SQL editor. Without it you'll see `permission denied for table
+...` errors even though the RLS policy looks correct.
 
 ## 3. Enable auth providers
 

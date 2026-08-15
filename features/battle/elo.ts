@@ -1,7 +1,7 @@
 import { RATING_FLOOR } from '@/lib/config/ranks'
 
 /**
- * Chess-style Elo. Rating floor enforced at 750; start rating 1000 (see
+ * Diagnostic Elo Rating System. Rating floor enforced at 750; start rating 1000 (see
  * `lib/config/ranks.ts`). Kept dependency-free and pure so it can run on the
  * server (match settlement) or client (projected deltas).
  */

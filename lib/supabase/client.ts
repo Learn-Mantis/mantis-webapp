@@ -20,3 +20,12 @@ export function getSupabaseBrowserClient() {
   if (!cached) cached = createBrowserClient<Database>(url, anon)
   return cached
 }
+
+/** Convenience helper matching standard Supabase SSR naming */
+export function createClient() {
+  if (!url || !anon) {
+    // Return a dummy client or initialize with empty strings so it won't crash callers
+    return createBrowserClient<Database>('https://placeholder.supabase.co', 'placeholder')
+  }
+  return getSupabaseBrowserClient()!
+}

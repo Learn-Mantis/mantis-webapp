@@ -19,7 +19,7 @@ export function BottomNav() {
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href))
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 pb-[max(env(safe-area-inset-bottom),0px)]">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 pb-[max(env(safe-area-inset-bottom),0px)]">
       <div className="relative mx-auto max-w-[480px] px-4 pb-4">
         <div className="glass relative flex items-center justify-between rounded-[28px] border border-[var(--color-surface-light-border)] dark:border-[var(--color-surface-dark-border)] px-2 shadow-[var(--shadow-soft)] dark:shadow-[var(--shadow-soft-dark)] h-[68px]">
           {tabs.map((tab) => {

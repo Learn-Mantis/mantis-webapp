@@ -117,9 +117,11 @@ create table public.questions (
 
 alter table public.questions enable row level security;
 
--- Readable by signed-in users; writes happen only via the service role (ingestion).
-create policy "Questions readable by authenticated users"
-  on public.questions for select to authenticated using (true);
+-- Readable by all users (guests and signed-in); writes happen only via the service role (ingestion).
+drop policy if exists "Questions readable by authenticated users" on public.questions;
+drop policy if exists "Questions readable by anyone" on public.questions;
+create policy "Questions readable by anyone"
+  on public.questions for select using (true);
 
 create index questions_subject_idx on public.questions (subject);
 create index questions_group_diff_idx on public.questions (subject_group, difficulty);

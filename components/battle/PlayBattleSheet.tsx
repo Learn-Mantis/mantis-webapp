@@ -51,7 +51,12 @@ export function PlayBattleSheet({ open, onClose, onFindMatch }: PlayBattleSheetP
   }
 
   return (
-    <Sheet open={open} onClose={handleClose} title={step === 1 ? 'Choose Category' : 'Choose Mode'}>
+    <Sheet
+      open={open}
+      onClose={handleClose}
+      title={step === 1 ? 'Choose Category' : 'Choose Mode'}
+      className="sm:max-w-lg"
+    >
       {step === 1 && (
         <div className="flex flex-col gap-5">
           <div className="flex flex-wrap gap-2 max-h-[46vh] overflow-y-auto no-scrollbar">

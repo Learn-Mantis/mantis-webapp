@@ -33,6 +33,7 @@ export interface Database {
           college?: string | null
         }
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
+        Relationships: []
       }
       battle_profiles: {
         Row: {
@@ -75,6 +76,7 @@ export interface Database {
           username_changed_at?: string | null
           avatar_changed_at?: string | null
         }
+        Relationships: []
       }
       follows: {
         Row: {
@@ -87,6 +89,7 @@ export interface Database {
           following_battle_profile_id: string
         }
         Update: Partial<Database['public']['Tables']['follows']['Insert']>
+        Relationships: []
       }
       questions: {
         Row: {
@@ -126,6 +129,7 @@ export interface Database {
           is_active?: boolean
         }
         Update: Partial<Database['public']['Tables']['questions']['Insert']>
+        Relationships: []
       }
       decks: {
         Row: {
@@ -149,6 +153,7 @@ export interface Database {
           is_public?: boolean
         }
         Update: Partial<Database['public']['Tables']['decks']['Insert']>
+        Relationships: []
       }
       cards: {
         Row: {
@@ -168,11 +173,13 @@ export interface Database {
           position?: number
         }
         Update: Partial<Database['public']['Tables']['cards']['Insert']>
+        Relationships: []
       }
       deck_saves: {
         Row: { user_id: string; deck_id: string; created_at: string }
         Insert: { user_id: string; deck_id: string }
         Update: Partial<{ user_id: string; deck_id: string }>
+        Relationships: []
       }
       card_reviews: {
         Row: {
@@ -198,6 +205,7 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['card_reviews']['Insert']> & {
           last_reviewed_at?: string | null
         }
+        Relationships: []
       }
     }
     Views: {
@@ -211,6 +219,7 @@ export interface Database {
           state: string | null
           college: string | null
         }
+        Relationships: []
       }
     }
     Functions: Record<string, never>

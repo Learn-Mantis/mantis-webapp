@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Label } from '@/components/ui/Field'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
+import { MantisLogo } from '@/components/ui/Logo'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { signInWithGoogle, NOT_CONFIGURED } from '@/features/auth/actions'
 
@@ -48,9 +49,7 @@ export default function LoginPage() {
 
       <div className="flex-1 flex flex-col justify-center">
         <div className="mb-7">
-          <span className="text-2xl font-extrabold font-[var(--font-display)]">
-            Mantis<span className="text-brand-500">.</span>
-          </span>
+          <MantisLogo size={44} withText href="/" />
           <h1 className="text-[26px] font-extrabold font-[var(--font-display)] mt-4">Welcome back</h1>
           <p className="text-sm text-neutral-500 mt-1">Log in to continue your streak.</p>
         </div>
@@ -94,12 +93,17 @@ export default function LoginPage() {
         </Button>
       </div>
 
-      <p className="text-center text-sm text-neutral-500">
-        New to Mantis?{' '}
-        <Link href="/signup" className="font-semibold text-brand-600 dark:text-brand-400">
-          Create account
+      <div className="flex flex-col items-center gap-2 text-center text-sm text-neutral-500 mt-4">
+        <p>
+          New to Mantis?{' '}
+          <Link href="/signup" className="font-semibold text-brand-600 dark:text-brand-400">
+            Create account
+          </Link>
+        </p>
+        <Link href="/" className="text-xs font-bold text-neutral-500 hover:text-brand-600 transition-colors">
+          ⚡ Or take the 60-Second Diagnostic Duel
         </Link>
-      </p>
+      </div>
     </>
   )
 }

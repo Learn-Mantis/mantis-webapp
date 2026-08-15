@@ -20,11 +20,11 @@ export function AuthGateSheet() {
   }
 
   function handleContinue() {
-    navigate(hasSeenOnboarding() ? '/login' : '/onboarding')
+    navigate('/signup')
   }
 
   return (
-    <Sheet open={open} onClose={close} showClose>
+    <Sheet open={open} onClose={close} showClose className="sm:max-w-md">
       <div className="flex flex-col items-center gap-4 text-center pb-1">
         <div className="flex items-center gap-2">
           {[Swords, Brain, Layers].map((Icon, i) => (
