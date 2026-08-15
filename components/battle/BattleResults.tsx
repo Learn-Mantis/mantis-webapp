@@ -17,13 +17,18 @@ import {
   Clock,
   Target,
   BookOpen,
+  Sparkles,
+  BookmarkPlus,
+  Check,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { RankBadge } from '@/components/battle/RankBadge'
 import { getRank, getNextRank } from '@/lib/config/ranks'
 import { subjectName } from '@/lib/config/subjects'
+import { useFlashcardStore } from '@/stores/flashcards'
 import type { MatchSummary } from '@/features/battle/service'
 import { cn } from '@/lib/utils'
 
@@ -36,6 +41,8 @@ interface BattleResultsProps {
 
 export function BattleResults({ summary, isPractice = false, onPlayAgain, onExit }: BattleResultsProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  const [savedCards, setSavedCards] = useState<Record<number, boolean>>({})
+  const { addFromMistake } = useFlashcardStore()
 
   const { user, opponent, questions, userRecords, userScore, opponentScore, winner, userRatingUpdate } = summary
 
@@ -63,6 +70,49 @@ export function BattleResults({ summary, isPractice = false, onPlayAgain, onExit
     } else {
       currentStreak = 0
     }
+  }
+
+  const missedIndices = userRecords
+    .map((r, i) => (!r.correct ? i : -1))
+    .filter((i) => i !== -1)
+
+  function handleSaveSingleMistake(idx: number) {
+    const q = questions[idx]
+    if (!q) return
+    const correctText = q.options[q.correctOption]
+    addFromMistake({
+      question: q.question,
+      correctAnswer: `${q.correctOption}: ${correctText}`,
+      explanation: q.explanation || undefined,
+      clinicalPearl: q.explanation ? `Remember: ${correctText}` : undefined,
+      subject: subjectName(q.subject),
+    })
+    setSavedCards((prev) => ({ ...prev, [idx]: true }))
+    toast.success(`Saved Q${idx + 1} to your Mistake Flashcards!`)
+  }
+
+  function handleSaveAllMissed() {
+    let savedCount = 0
+    missedIndices.forEach((idx) => {
+      const q = questions[idx]
+      if (q && !savedCards[idx]) {
+        const correctText = q.options[q.correctOption]
+        addFromMistake({
+          question: q.question,
+          correctAnswer: `${q.correctOption}: ${correctText}`,
+          explanation: q.explanation || undefined,
+          clinicalPearl: q.explanation ? `Remember: ${correctText}` : undefined,
+          subject: subjectName(q.subject),
+        })
+        savedCount++
+      }
+    })
+    const newSaved: Record<number, boolean> = { ...savedCards }
+    missedIndices.forEach((i) => {
+      newSaved[i] = true
+    })
+    setSavedCards(newSaved)
+    toast.success(`Saved ${savedCount || missedIndices.length} missed questions to your Mistake Flashcards!`)
   }
 
   return (
@@ -102,107 +152,118 @@ export function BattleResults({ summary, isPractice = false, onPlayAgain, onExit
       </motion.div>
 
       {/* Duel Score Comparison Card */}
-      <Card className="p-4 bg-gradient-to-br from-[var(--color-surface-light-muted)] to-[var(--color-surface-light)] dark:from-[var(--color-surface-dark-muted)] dark:to-[var(--color-surface-dark)]">
-        <div className="flex items-center justify-between gap-3">
-          {/* User */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Avatar initials={user.avatarKey || user.name.slice(0, 2).toUpperCase()} size={42} />
-            <div className="min-w-0">
-              <p className="font-bold text-sm truncate">{user.name}</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Score: {userScore}</p>
+      <Card className="p-6 relative overflow-hidden shadow-lg border border-[var(--color-surface-light-border)] dark:border-[var(--color-surface-dark-border)]">
+        <div className="grid grid-cols-3 items-center text-center">
+          {/* User Side */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative">
+              <Avatar initials={user.name.slice(0, 2).toUpperCase()} size={60} ring />
+              {isWin && (
+                <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-gold-500 text-white shadow-md">
+                  <Trophy size={13} />
+                </div>
+              )}
             </div>
-          </div>
-
-          {/* Score Badge */}
-          <div className="flex flex-col items-center px-4 py-2 rounded-2xl bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 shrink-0">
-            <span className="text-2xl font-black font-[var(--font-display)]">
-              {correctCount} - {opponentScore}
-            </span>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-500">
-              {totalQuestions} Questions
-            </span>
-          </div>
-
-          {/* Opponent */}
-          <div className="flex items-center gap-3 flex-1 min-w-0 justify-end text-right">
-            <div className="min-w-0">
-              <p className="font-bold text-sm truncate">{opponent.name}</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Score: {opponentScore}</p>
-            </div>
-            <Avatar initials={opponent.avatarKey || opponent.name.slice(0, 2).toUpperCase()} size={42} />
-          </div>
-        </div>
-      </Card>
-
-      {/* Elo Rating Update Card */}
-      <Card className="p-5 border-brand-500/20 bg-brand-500/5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <RankBadge tier={userRank} size={40} />
             <div>
-              <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
-                {isPractice ? 'Practice Session' : 'Rating Progress'}
-              </p>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-2xl font-extrabold font-[var(--font-display)]">
-                  {userRatingUpdate.rating}
-                </span>
-                {isPractice ? (
-                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
-                    ±0 Elo (Practice)
-                  </span>
-                ) : (
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-0.5 text-sm font-black',
-                      userRatingUpdate.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
-                    )}
-                  >
-                    {userRatingUpdate.delta >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                    {userRatingUpdate.delta >= 0 ? `+${userRatingUpdate.delta}` : userRatingUpdate.delta}
-                  </span>
-                )}
+              <p className="font-extrabold text-sm truncate max-w-[120px] sm:max-w-none">{user.name} (You)</p>
+              <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                <RankBadge tier={userRank} size={20} />
+                <span className="text-xs font-bold text-neutral-500">{userRatingUpdate.rating}</span>
               </div>
             </div>
+            <div className="text-3xl lg:text-4xl font-black font-[var(--font-display)] text-brand-600 dark:text-brand-400">
+              {userScore}
+            </div>
           </div>
 
-          <div className="text-right">
-            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-500/10 px-2.5 py-1 rounded-full">
-              {userRank.name}
-            </span>
-            {nextRank && !isPractice && (
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-                {nextRank.minRating - userRatingUpdate.rating} pts to {nextRank.name}
-              </p>
-            )}
+          {/* VS Divider & Rating Delta */}
+          <div className="flex flex-col items-center justify-center gap-2 px-2">
+            <span className="text-xs font-black uppercase text-neutral-400">VS</span>
+            <div
+              className={cn(
+                'px-3.5 py-1.5 rounded-full font-black text-xs sm:text-sm shadow-sm flex items-center gap-1',
+                isPractice
+                  ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                  : userRatingUpdate.delta >= 0
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
+              )}
+            >
+              {isPractice ? (
+                '±0 Practice'
+              ) : userRatingUpdate.delta >= 0 ? (
+                <>
+                  <TrendingUp size={14} /> +{userRatingUpdate.delta} Elo
+                </>
+              ) : (
+                <>
+                  <TrendingDown size={14} /> {userRatingUpdate.delta} Elo
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Opponent Side */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative">
+              <Avatar initials={opponent.name.slice(0, 2).toUpperCase()} size={60} ring />
+              {isLoss && (
+                <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-gold-500 text-white shadow-md">
+                  <Trophy size={13} />
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="font-extrabold text-sm truncate max-w-[120px] sm:max-w-none">{opponent.name}</p>
+              <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                <span className="text-xs font-bold text-neutral-500">{opponent.rating}</span>
+              </div>
+            </div>
+            <div className="text-3xl lg:text-4xl font-black font-[var(--font-display)] text-neutral-400">
+              {opponentScore}
+            </div>
           </div>
         </div>
       </Card>
 
-      {/* Match Statistics */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[var(--color-surface-light)] dark:bg-[var(--color-surface-dark)] border border-[var(--color-surface-light-border)] dark:border-[var(--color-surface-dark-border)] text-center">
-          <Target size={18} className="text-brand-500 mb-1" />
-          <span className="text-lg font-extrabold font-[var(--font-display)]">{accuracy}%</span>
-          <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Accuracy</span>
-        </div>
+      {/* Match Performance Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="p-4 flex flex-col items-center text-center">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 mb-2">
+            <Target size={18} />
+          </div>
+          <span className="text-xl font-black font-[var(--font-display)]">{accuracy}%</span>
+          <span className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Accuracy</span>
+        </Card>
 
-        <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[var(--color-surface-light)] dark:bg-[var(--color-surface-dark)] border border-[var(--color-surface-light-border)] dark:border-[var(--color-surface-dark-border)] text-center">
-          <Clock size={18} className="text-info-500 mb-1" />
-          <span className="text-lg font-extrabold font-[var(--font-display)]">{avgResponseSec}s</span>
-          <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Avg Speed</span>
-        </div>
+        <Card className="p-4 flex flex-col items-center text-center">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-info-500/10 text-info-600 dark:text-info-400 mb-2">
+            <Clock size={18} />
+          </div>
+          <span className="text-xl font-black font-[var(--font-display)]">{avgResponseSec}s</span>
+          <span className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Avg Speed</span>
+        </Card>
 
-        <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[var(--color-surface-light)] dark:bg-[var(--color-surface-dark)] border border-[var(--color-surface-light-border)] dark:border-[var(--color-surface-dark-border)] text-center">
-          <Flame size={18} className="text-gold-500 mb-1" />
-          <span className="text-lg font-extrabold font-[var(--font-display)]">{maxStreak}</span>
-          <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Best Streak</span>
-        </div>
+        <Card className="p-4 flex flex-col items-center text-center">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-500/10 text-gold-600 dark:text-gold-400 mb-2">
+            <Flame size={18} />
+          </div>
+          <span className="text-xl font-black font-[var(--font-display)]">{maxStreak}</span>
+          <span className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Max Streak</span>
+        </Card>
+
+        <Card className="p-4 flex flex-col items-center text-center">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 mb-2">
+            <Zap size={18} />
+          </div>
+          <span className="text-xl font-black font-[var(--font-display)]">+{userScore * 20}</span>
+          <span className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">XP Gained</span>
+        </Card>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3">
-        <Button size="lg" className="flex-1" onClick={onPlayAgain}>
+      <div className="flex items-center justify-center gap-3">
+        <Button size="lg" onClick={onPlayAgain} className="gap-2 font-bold shadow-lg px-6">
           <RotateCcw size={18} /> Play Again
         </Button>
         <Button size="lg" variant="secondary" onClick={onExit} className="px-6">
@@ -212,12 +273,23 @@ export function BattleResults({ summary, isPractice = false, onPlayAgain, onExit
 
       {/* Question Review Section */}
       <div className="flex flex-col gap-3 pt-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <BookOpen size={18} className="text-brand-500" />
             <h3 className="font-bold text-base">Question Review</h3>
+            <span className="text-xs text-neutral-500">({questions.length} questions)</span>
           </div>
-          <span className="text-xs text-neutral-500">{questions.length} questions</span>
+
+          {missedIndices.length > 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleSaveAllMissed}
+              className="gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 self-start sm:self-auto"
+            >
+              <BookmarkPlus size={14} /> Save {missedIndices.length} Missed to Flashcards
+            </Button>
+          )}
         </div>
 
         <div className="flex flex-col gap-2.5">
@@ -225,6 +297,7 @@ export function BattleResults({ summary, isPractice = false, onPlayAgain, onExit
             const record = userRecords[idx]
             const isCorrect = record?.correct
             const isExpanded = expandedIndex === idx
+            const isSaved = savedCards[idx]
 
             return (
               <div
@@ -307,6 +380,22 @@ export function BattleResults({ summary, isPractice = false, onPlayAgain, onExit
                       <div className="p-3 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs leading-relaxed text-brand-950 dark:text-brand-200">
                         <span className="font-bold block mb-1">💡 Explanation:</span>
                         {q.explanation}
+                      </div>
+                    )}
+
+                    {/* Quick Flashcard Save Action */}
+                    {!isCorrect && (
+                      <div className="flex items-center justify-end pt-1">
+                        <Button
+                          size="sm"
+                          variant={isSaved ? 'secondary' : 'primary'}
+                          disabled={isSaved}
+                          onClick={() => handleSaveSingleMistake(idx)}
+                          className="gap-1.5 text-xs font-bold"
+                        >
+                          {isSaved ? <Check size={13} className="text-emerald-500" /> : <BookmarkPlus size={13} />}
+                          {isSaved ? 'Saved to Mistake Notebook' : '+ Save to Mistake Flashcards'}
+                        </Button>
                       </div>
                     )}
                   </div>
