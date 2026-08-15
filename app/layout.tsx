@@ -23,9 +23,12 @@ export const metadata: Metadata = {
   description:
     'QBank, Battle Mode, and Flashcards for medical students. Practice, compete, and retain — in one premium experience.',
   icons: {
-    icon: '/logo.png',
-    shortcut: '/logo.png',
-    apple: '/logo.png',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/logo.png', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
 }
 
