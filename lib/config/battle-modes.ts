@@ -1,6 +1,7 @@
 /**
- * Battle game modes. Rules per product spec — change here only; never hardcode
- * counts/timers elsewhere.
+ * Battle game modes. Rules per product spec — never hardcode counts/timers
+ * elsewhere. The server enforces the same rules in `_mode_cfg()`
+ * (supabase/migrations/0003_battles_v2.sql): change both together.
  */
 
 export type BattleModeKey = 'rapid' | 'blitz' | 'marathon'

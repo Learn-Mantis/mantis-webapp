@@ -63,14 +63,14 @@ const ONBOARDING_QUESTIONS: ClinicalVignette[] = [
     subjectLabel: 'Cardiology',
     difficulty: 'medium',
     question:
-      'A 58-year-old male with long-standing hypertension presents with sudden severe tearing chest pain radiating to the interscapular region. Blood pressure in the right arm is 180/100 mmHg and left arm is 130/70 mmHg. What is the definitive initial diagnostic test of choice in a hemodynamically stable patient?',
+      'A 58-year-old male with long-standing hypertension presents with sudden severe tearing chest pain radiating to the interscapular region. Blood pressure in the right arm is 180/100 mmHg and left arm is 130/70 mmHg. What is the investigation of choice to confirm the diagnosis in this hemodynamically stable patient?',
     options: {
       A: 'Transthoracic Echocardiogram (TTE)',
-      B: 'Contrast-Enhanced CT Angiography (CTA) of the chest',
-      C: 'Coronary Angiography',
+      B: 'Coronary Angiography',
+      C: 'Contrast-Enhanced CT Angiography (CTA) of the chest',
       D: '12-Lead Electrocardiogram',
     },
-    correctOption: 'B',
+    correctOption: 'C',
     explanation:
       'Contrast-Enhanced CT Angiography (CTA) of the chest is the gold standard and most rapid diagnostic investigation for acute aortic dissection in hemodynamically stable patients (Sensitivity & Specificity > 98%).',
     clinicalPearl:
@@ -82,14 +82,14 @@ const ONBOARDING_QUESTIONS: ClinicalVignette[] = [
     subjectLabel: 'Emergency Pharmacology',
     difficulty: 'easy',
     question:
-      'A 24-year-old female presents with acute acetaminophen overdose 3 hours after ingestion. Serum acetaminophen level falls above the Rumack-Matthew nomogram treatment line. What is the specific antidote and its mechanism of action?',
+      'A 24-year-old female presents with a single acute acetaminophen overdose. The serum acetaminophen level drawn 4 hours after ingestion falls above the Rumack-Matthew nomogram treatment line. What is the specific antidote and its mechanism of action?',
     options: {
-      A: 'Deferoxamine — Iron chelation',
-      B: 'N-acetylcysteine (NAC) — Restores hepatic glutathione stores',
+      A: 'N-acetylcysteine (NAC) — Restores hepatic glutathione stores',
+      B: 'Deferoxamine — Iron chelation',
       C: 'Flumazenil — Competitive GABA-A antagonism',
       D: 'Pralidoxime — Reactivates acetylcholinesterase',
     },
-    correctOption: 'B',
+    correctOption: 'A',
     explanation:
       'N-acetylcysteine (NAC) replenishes intracellular hepatic glutathione (GSH), which conjugates and detoxifies the toxic metabolite NAPQI (N-acetyl-p-benzoquinone imine), preventing centrilobular hepatic necrosis.',
     clinicalPearl:
@@ -104,13 +104,13 @@ const ONBOARDING_QUESTIONS: ClinicalVignette[] = [
       'A 4-year-old boy presents with high fever for 6 days, bilateral non-purulent conjunctivitis, erythema and edema of hands and feet, cervical lymphadenopathy, and a "strawberry tongue". What is the most critical echocardiographic complication to screen for?',
     options: {
       A: 'Ventricular Septal Defect',
-      B: 'Coronary Artery Aneurysms',
+      B: 'Tetralogy of Fallot',
       C: 'Coarctation of the Aorta',
-      D: 'Tetralogy of Fallot',
+      D: 'Coronary Artery Aneurysms',
     },
-    correctOption: 'B',
+    correctOption: 'D',
     explanation:
-      'Kawasaki disease (Mucocutaneous Lymph Node Syndrome) is a medium-vessel vasculitis. The most dreaded complication is Coronary Artery Aneurysms (occurs in ~20-25% of untreated cases). Treatment with IVIG and high-dose Aspirin significantly reduces this risk.',
+      'Kawasaki disease (Mucocutaneous Lymph Node Syndrome) is a medium-vessel vasculitis. The most dreaded complication is Coronary Artery Aneurysms (occurs in ~25% of untreated cases). Treatment with IVIG and high-dose Aspirin significantly reduces this risk.',
     clinicalPearl:
       'Mnemonic "CRASH and Burn": Conjunctivitis, Rash, Adenopathy, Strawberry tongue, Hands/feet swelling + Burn (fever ≥ 5 days).',
   },
@@ -129,7 +129,7 @@ const ONBOARDING_QUESTIONS: ClinicalVignette[] = [
     },
     correctOption: 'B',
     explanation:
-      'Acute calculous cholecystitis with sonographic signs of inflammation (wall thickness > 3mm, Murphy’s sign, pericholecystic fluid) is definitively managed by early laparoscopic cholecystectomy (within 72 hours of admission).',
+      'Acute calculous cholecystitis with sonographic signs of inflammation (wall thickness > 3mm, Murphy’s sign, pericholecystic fluid) is definitively managed by early laparoscopic cholecystectomy (ideally within 72 hours of symptom onset).',
     clinicalPearl:
       'Early laparoscopic cholecystectomy reduces total hospital stay and complication rates compared to interval delayed surgery.',
   },
@@ -137,20 +137,20 @@ const ONBOARDING_QUESTIONS: ClinicalVignette[] = [
     id: 'onb-5',
     subject: 'pathology',
     subjectLabel: 'Hematopathology',
-    difficulty: 'hard',
+    difficulty: 'medium',
     question:
       'A 32-year-old female presents with severe fatigue, pallor, and jaundice. Peripheral blood smear reveals numerous spherocytes and polychromasia. Direct Antiglobulin Test (Coombs test) is strongly positive with IgG. What is the diagnosis?',
     options: {
-      A: 'Hereditary Spherocytosis',
-      B: 'Warm Autoimmune Hemolytic Anemia (AIHA)',
-      C: 'Cold Agglutinin Disease (IgM)',
+      A: 'Warm Autoimmune Hemolytic Anemia (AIHA)',
+      B: 'Hereditary Spherocytosis',
+      C: 'Cold Agglutinin Disease',
       D: 'Paroxysmal Nocturnal Hemoglobinuria',
     },
-    correctOption: 'B',
+    correctOption: 'A',
     explanation:
       'Warm Autoimmune Hemolytic Anemia is mediated by IgG antibodies (active at 37°C) causing extravascular hemolysis in the spleen. It is distinguished from Hereditary Spherocytosis by a positive Direct Coombs Test (Hereditary Spherocytosis is Coombs negative).',
     clinicalPearl:
-      'IgG antibodies = Warm AIHA (extravascular, spleen); IgM antibodies = Cold AIHA (intravascular, liver).',
+      'IgG antibodies = Warm AIHA (extravascular, spleen); IgM antibodies = Cold agglutinin disease (complement-mediated; mainly extravascular in the liver).',
   },
 ]
 
@@ -165,9 +165,9 @@ const BATCH_OPTIONS = [
 ]
 
 const OPPONENT_PROFILES = [
-  { name: 'Dr. Ayesha Patel', college: 'AIIMS New Delhi', avatar: '🩺', rating: 1000 },
-  { name: 'Dr. Rohan Verma', college: 'KGMU Lucknow', avatar: '🧠', rating: 1000 },
-  { name: 'Dr. Sneha Nair', college: 'CMC Vellore', avatar: '⚡', rating: 1000 },
+  { name: 'Bot · Stetho', college: 'Practice bot', avatar: '🩺', rating: 1000 },
+  { name: 'Bot · Synapse', college: 'Practice bot', avatar: '🧠', rating: 1000 },
+  { name: 'Bot · Reflex', college: 'Practice bot', avatar: '⚡', rating: 1000 },
 ]
 
 type OnboardingStage = 'hero' | 'matching' | 'battle' | 'result' | 'register'
@@ -445,7 +445,7 @@ export function QuickBattleOnboarding() {
                 Log In
               </Button>
             </Link>
-            <Link href="/signup" className="hidden sm:inline-flex">
+            <Link href="/signup">
               <Button variant="secondary" size="sm" className="font-bold text-xs sm:text-sm">
                 Sign Up
               </Button>
@@ -476,7 +476,7 @@ export function QuickBattleOnboarding() {
                   Test Your <span className="text-brand-500">Diagnostic</span> Speed.
                 </h1>
                 <p className="text-sm sm:text-base lg:text-lg text-neutral-600 dark:text-neutral-300 leading-relaxed max-w-lg">
-                  Compete in a 60-second 1v1 clinical duel against a medical peer. 5 high-yield vignettes from cardiology, pharmacology, surgery, and pediatrics.
+                  Play a quick 1v1 clinical duel against a practice bot. 5 high-yield vignettes from cardiology, pharmacology, surgery, and pediatrics.
                 </p>
               </motion.div>
 
@@ -496,7 +496,18 @@ export function QuickBattleOnboarding() {
                 </Button>
 
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  Zero signup required to play · Takes &lt; 60 seconds
+                  Zero signup required to play · Takes about a minute
+                </p>
+
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Skip the demo?{' '}
+                  <Link href="/signup" className="font-bold text-brand-600 dark:text-brand-400 hover:underline">
+                    Create an account
+                  </Link>{' '}
+                  or{' '}
+                  <Link href="/login" className="font-bold text-brand-600 dark:text-brand-400 hover:underline">
+                    log in
+                  </Link>
                 </p>
               </motion.div>
 
@@ -531,7 +542,7 @@ export function QuickBattleOnboarding() {
                       Live 1v1 Diagnostic Match
                     </span>
                     <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-500">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Simulated Peer Ready
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Practice Bot Ready
                     </span>
                   </div>
 
@@ -572,7 +583,7 @@ export function QuickBattleOnboarding() {
                       <span className="text-brand-600 dark:text-brand-400 font-extrabold">Medium</span>
                     </div>
                     <p className="text-xs text-neutral-800 dark:text-neutral-200 line-clamp-2 leading-relaxed font-medium">
-                      &ldquo;A 58-year-old male presents with sudden severe tearing chest pain radiating to the back. What is the definitive initial diagnostic test?&rdquo;
+                      &ldquo;A 58-year-old male presents with sudden severe tearing chest pain radiating to the back. What is the investigation of choice to confirm the diagnosis?&rdquo;
                     </p>
                   </div>
 

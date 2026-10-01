@@ -35,7 +35,9 @@ export default function LoginPage() {
       return
     }
     toast.success('Welcome back')
-    router.push('/')
+    // Return to where the person came from (e.g. a challenge link). Same-site paths only.
+    const next = new URLSearchParams(window.location.search).get('next')
+    router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/')
   }
 
   async function handleForgotPassword(e: React.FormEvent) {

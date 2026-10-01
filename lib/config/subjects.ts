@@ -76,3 +76,8 @@ export const BATTLE_CATEGORIES: BattleCategoryOption[] = [
     category: { kind: 'subject', code: s.code } as BattleCategory,
   })),
 ]
+
+/** Display label for a battle category id ('all', a group key or a subject code). */
+export function categoryLabel(id: string): string {
+  return BATTLE_CATEGORIES.find((c) => c.id === id)?.label ?? id
+}

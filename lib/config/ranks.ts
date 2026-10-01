@@ -19,7 +19,8 @@ export const RANK_TIERS: RankTier[] = [
   { key: 'intern', name: 'Intern', minRating: 750, color: '#B08D57' },
   { key: 'resident', name: 'Resident', minRating: 1000, color: '#9CA3AF' },
   { key: 'registrar', name: 'Registrar', minRating: 1250, color: '#22c55e' },
-  { key: 'specialist', name: 'Specialist', minRating: 1500, color: '#3b7dfb' },
+  // Key kept as 'specialist' (stored in battle_profiles.rank_key / bots.rank_key).
+  { key: 'specialist', name: 'Senior Resident', minRating: 1500, color: '#3b7dfb' },
   { key: 'consultant', name: 'Consultant', minRating: 1800, color: '#f5b301' },
 ]
 

@@ -47,6 +47,7 @@ export interface Database {
           losses: number
           current_streak: number
           rank_key: string
+          is_guest: boolean
           country: string | null
           state: string | null
           college: string | null

@@ -18,3 +18,6 @@ npm-debug.log*
 
 # MedMCQA raw dataset
 /data
+
+# Claude Design handoff (reference only)
+/design

@@ -74,6 +74,7 @@ export function LeaderboardModal({
     supabase
       .from('battle_profiles')
       .select('user_id, battle_username, avatar_key, rating, college, state')
+      .eq('is_guest', false)
       .order('rating', { ascending: false })
       .limit(50)
       .then(({ data, error }) => {
