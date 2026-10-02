@@ -33,7 +33,19 @@ function writeSecret(secret: string | null) {
  * Makes sure there is a session (account or guest) with a battle profile.
  * Starts a guest session when nobody is signed in.
  */
-export async function ensurePlayer(): Promise<BattleProfile> {
+export function ensurePlayer(): Promise<BattleProfile> {
+  // Screens often ask at the same moment (e.g. a page loading its profile while
+  // the person taps Play). Share one in-flight call so a new player is only
+  // created once and only one merge secret is issued.
+  inFlight ??= createPlayer().finally(() => {
+    inFlight = null
+  })
+  return inFlight
+}
+
+let inFlight: Promise<BattleProfile> | null = null
+
+async function createPlayer(): Promise<BattleProfile> {
   const supabase = getSupabaseBrowserClient()
   if (!supabase) throw new BattleApiError('not_configured')
 
