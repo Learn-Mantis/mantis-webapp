@@ -18,12 +18,12 @@ export default function BattlePlayPage() {
     } else if (s.kind === 'challenge') {
       starter.startChallenge(s.mode, s.category_id, s.rated)
     } else {
-      router.push(`/battle?again=live&mode=${s.mode}&cat=${encodeURIComponent(s.category_id)}&rated=${s.rated ? 1 : 0}`)
+      router.push(`/battle/new?again=1&mode=${s.mode}&cat=${encodeURIComponent(s.category_id)}&rated=${s.rated ? 1 : 0}`)
     }
   }
 
   return (
-    <PageContainer>
+    <PageContainer focus>
       {/* key: a new battle id must start a fresh run */}
       <BattleRun key={id} battleId={id} onExit={() => router.push('/battle')} onPlayAgain={playAgain} />
     </PageContainer>

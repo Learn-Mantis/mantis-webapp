@@ -2,290 +2,170 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import {
-  Flame,
-  Trophy,
-  Swords,
-  BookOpen,
-  Brain,
-  Sun,
-  Moon,
-  ChevronRight,
-  Target,
-  TrendingUp,
-  Zap,
-} from 'lucide-react'
-import { motion } from 'framer-motion'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { ProgressRing } from '@/components/ui/ProgressRing'
-import { SectionHeader } from '@/components/ui/SectionHeader'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, Flame, Layers, NotebookPen, Swords, Trophy } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Skeleton } from '@/components/ui/Feedback'
+import { ListRow } from '@/components/ui/ListRow'
+import { MantisLogo } from '@/components/ui/Logo'
+import { ProgressRing } from '@/components/ui/ProgressRing'
 import { PageContainer } from '@/components/layout/PageContainer'
-import { QuickBattleOnboarding } from '@/components/onboarding/QuickBattleOnboarding'
-import { useTheme } from '@/lib/theme'
+import { RankBadge } from '@/components/battle/RankBadge'
+import { Landing } from '@/components/onboarding/Landing'
 import { useUser } from '@/features/auth/user-provider'
-import { useDisplayName } from '@/features/auth/use-display-name'
-import { getRank } from '@/lib/config/ranks'
-import { getSupabaseBrowserClient } from '@/lib/supabase/client'
-import type { Database } from '@/types/database'
+import { ensurePlayer } from '@/features/auth/guest'
+import { battleApi, type BattleProfile, type MyStats } from '@/features/battle/api'
+import { MISTAKE_DECK_ID, useFlashcardStore } from '@/stores/flashcards'
+import { STARTING_RATING } from '@/lib/config/ranks'
 
-const trending = ['Acute Pancreatitis', 'Nephrotic Syndrome', 'TB Pharmacotherapy', 'Wilms Tumor', 'Aortic Dissection', 'Kawasaki Disease']
+const DEFAULT_GOAL = 50
 
-function greeting(hour: number) {
-  if (hour < 12) return 'Good Morning'
-  if (hour < 17) return 'Good Afternoon'
-  return 'Good Evening'
+function greeting() {
+  const h = new Date().getHours()
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
 }
 
-function AuthedHome() {
+function SignedInHome() {
+  const router = useRouter()
   const { user } = useUser()
-  const { theme, toggleTheme, mounted } = useTheme()
-  const name = useDisplayName()
-  const [hello, setHello] = useState('Welcome')
-
-  // Real profile data
-  const [rating, setRating] = useState<number>(1000)
-  const [streak, setStreak] = useState<number>(0)
-  const [games, setGames] = useState<number>(0)
-  const [wins, setWins] = useState<number>(0)
+  const [hello] = useState(greeting)
+  const [profile, setProfile] = useState<BattleProfile | null>(null)
+  const [stats, setStats] = useState<MyStats | null>(null)
+  const dueCount = useFlashcardStore((s) => s.getTotalDueCount())
+  const mistakes = useFlashcardStore((s) => s.cards.filter((c) => c.deckId === MISTAKE_DECK_ID).length)
 
   useEffect(() => {
-    setHello(greeting(new Date().getHours()))
+    let cancelled = false
+    ensurePlayer()
+      .then((p) => !cancelled && setProfile(p))
+      .catch(() => {})
+    battleApi
+      .myStats()
+      .then((s) => !cancelled && setStats(s))
+      .catch(() => !cancelled && setStats({ answered_total: 0, correct_total: 0, answered_today: 0, day_streak: 0 }))
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  useEffect(() => {
-    if (!user) return
-    const supabase = getSupabaseBrowserClient()
-    if (!supabase) return
-
-    supabase
-      .from('battle_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-      .then(({ data }) => {
-        const profile = data as Database['public']['Tables']['battle_profiles']['Row'] | null
-        if (profile) {
-          if (typeof profile.rating === 'number') setRating(profile.rating)
-          if (typeof profile.current_streak === 'number') setStreak(profile.current_streak)
-          if (typeof profile.games === 'number') setGames(profile.games)
-          if (typeof profile.wins === 'number') setWins(profile.wins)
-        }
-      })
-  }, [user])
-
-  const initials = name
-    .split(' ')
-    .map((s) => s[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || 'DR'
-  const rank = getRank(rating)
+  const meta = (user?.user_metadata ?? {}) as { daily_goal?: number; full_name?: string }
+  const goal = Number(meta.daily_goal) || DEFAULT_GOAL
+  const done = stats?.answered_today ?? 0
+  const left = Math.max(0, goal - done)
+  const rating = profile?.rating ?? STARTING_RATING
+  const name = profile?.username ?? meta.full_name?.split(' ')[0] ?? ''
 
   return (
     <PageContainer>
-      {/* Header Greeting */}
-      <div className="flex items-center justify-between pt-1">
-        <div className="flex flex-col gap-0.5">
-          <p className="text-xs lg:text-sm text-neutral-500 dark:text-neutral-400 font-medium">{hello},</p>
-          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight font-[var(--font-display)]">{name}</h1>
-        </div>
-        <div className="flex items-center gap-2 lg:hidden">
-          <button
-            onClick={toggleTheme}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface-light-muted)] dark:bg-[var(--color-surface-dark-muted)]"
-            aria-label="Toggle theme"
-          >
-            {mounted && theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          <Avatar initials={initials} size={42} />
-        </div>
-      </div>
-
-      {/* Multi-column Grid on Laptop/Desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-        {/* Left Column (7 of 12) */}
-        <div className="lg:col-span-7 xl:col-span-7 flex flex-col gap-6">
-          {/* Daily progress hero */}
-          <Card className="p-6 overflow-hidden relative shadow-md">
-            <div className="absolute -top-10 -right-10 h-44 w-44 rounded-full bg-brand-500/10 blur-2xl" />
-            <div className="flex items-center justify-between relative">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
-                    Diagnostic Rating & League
-                  </p>
-                  <p className="text-3xl font-black font-[var(--font-display)] mt-1">
-                    {rating} <span className="text-sm font-bold text-brand-600 dark:text-brand-400">Elo · {rank.name}</span>
-                  </p>
-                </div>
-                <div className="flex gap-6">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-500/10 text-gold-600 dark:text-gold-400">
-                      <Flame size={20} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-extrabold leading-none">{streak} days</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">Streak</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                      <Trophy size={20} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-extrabold leading-none">{wins} / {games}</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">Battles Won</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <ProgressRing progress={games > 0 ? Math.min(100, Math.round((wins / games) * 100)) : 0} size={100} strokeWidth={10}>
-                <div className="flex flex-col items-center">
-                  <span className="text-xl font-black font-[var(--font-display)]">
-                    {games > 0 ? `${Math.round((wins / games) * 100)}%` : '--'}
-                  </span>
-                  <span className="text-[10px] uppercase font-bold text-neutral-500">Win Rate</span>
-                </div>
-              </ProgressRing>
-            </div>
-          </Card>
-
-          {/* Quick actions */}
-          <div>
-            <SectionHeader title="Quick Actions" />
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Start Battle', icon: Swords, tone: 'gold', href: '/battle' },
-                { label: 'Review Flashcards', icon: Brain, tone: 'info', href: '/flashcards' },
-                { label: 'Browse QBank', icon: BookOpen, tone: 'brand', href: '/qbank' },
-              ].map((a) => (
-                <Link key={a.label} href={a.href}>
-                  <Card interactive className="flex flex-col items-center justify-center gap-3 py-5 px-3 text-center h-full hover:border-brand-500/40 transition-colors">
-                    <div
-                      className={
-                        a.tone === 'brand'
-                          ? 'flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400'
-                          : a.tone === 'gold'
-                            ? 'flex h-12 w-12 items-center justify-center rounded-2xl bg-gold-500/10 text-gold-600 dark:text-gold-400'
-                            : 'flex h-12 w-12 items-center justify-center rounded-2xl bg-info-500/10 text-info-600 dark:text-info-400'
-                      }
-                    >
-                      <a.icon size={22} />
-                    </div>
-                    <span className="text-xs sm:text-sm font-bold leading-tight">{a.label}</span>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Battle of the day */}
-          <Card className="relative overflow-hidden p-6 bg-gradient-to-br from-brand-600 to-brand-800 border-0 text-white shadow-xl shadow-brand-900/20">
-            <motion.div
-              animate={{ rotate: [0, 8, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -right-4 -top-4 opacity-20 pointer-events-none"
-            >
-              <Swords size={120} />
-            </motion.div>
-            <div className="relative flex flex-col gap-3">
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-100">
-                <Zap size={14} /> Battle Arena Duel
-              </div>
-              <div>
-                <p className="text-xl font-extrabold font-[var(--font-display)]">Live Medical Matchmaking</p>
-                <p className="text-sm text-brand-100/90 mt-0.5">Rapid Fire & Blitz 1v1 duels against peer doctors</p>
-              </div>
-              <Link href="/battle" className="w-fit">
-                <Button size="md" className="bg-white !text-brand-700 shadow-lg w-fit mt-1 font-bold" variant="secondary">
-                  Enter Battle Arena <ChevronRight size={16} />
-                </Button>
-              </Link>
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Column (5 of 12) */}
-        <div className="lg:col-span-5 xl:col-span-5 flex flex-col gap-6">
-          {/* Daily Challenge */}
-          <Link href="/battle">
-            <Card interactive className="p-5 flex items-center gap-4 hover:border-gold-500/40 transition-colors">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gold-500/10 text-gold-600 dark:text-gold-400">
-                <Target size={24} />
-              </div>
-              <div className="flex-1">
-                <p className="font-bold text-base">Daily Clinical Duel</p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Timed 1v1 battle · Rating & XP rewards</p>
-              </div>
-              <ChevronRight size={18} className="text-neutral-400" />
-            </Card>
+      {/* Phone header (desktop has the sidebar) */}
+      <div className="-mt-1 flex h-10 items-center justify-between lg:hidden">
+        <MantisLogo size={20} />
+        <div className="flex items-center gap-3">
+          {stats && stats.day_streak > 0 && (
+            <span className="num inline-flex items-center gap-1 text-sm text-on-highlight">
+              <Flame size={16} strokeWidth={1.75} fill="var(--antenna)" />
+              {stats.day_streak}
+            </span>
+          )}
+          <Link href="/account" aria-label="Profile">
+            <Avatar name={name || 'You'} size={32} />
           </Link>
-
-          {/* Recent battles status */}
-          <div>
-            <SectionHeader title="Your Battles" />
-            {games === 0 ? (
-              <Card className="p-6 text-center flex flex-col items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                  <Swords size={24} />
-                </div>
-                <div>
-                  <p className="font-bold text-sm">No battles played yet</p>
-                  <p className="text-xs text-neutral-500 mt-1 max-w-[240px] mx-auto">
-                    Challenge a peer doctor in a 1v1 clinical duel to climb the national leaderboard.
-                  </p>
-                </div>
-                <Link href="/battle">
-                  <Button size="sm" className="font-bold mt-1">
-                    Play First Battle
-                  </Button>
-                </Link>
-              </Card>
-            ) : (
-              <Card className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-sm">{games} Matches Completed</p>
-                  <p className="text-xs text-neutral-500">{wins} Victories · {games - wins} Defeats</p>
-                </div>
-                <Link href="/battle">
-                  <Button size="sm" variant="secondary" className="font-semibold text-xs">
-                    Arena History
-                  </Button>
-                </Link>
-              </Card>
-            )}
-          </div>
-
-          {/* Trending topics */}
-          <div>
-            <SectionHeader title="Trending High-Yield Topics" icon={<TrendingUp size={18} className="text-brand-500" />} />
-            <div className="flex flex-wrap gap-2">
-              {trending.map((t) => (
-                <Card key={t} interactive className="px-3.5 py-2">
-                  <span className="text-xs font-semibold">{t}</span>
-                </Card>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
+
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-sm text-fg-3" suppressHydrationWarning>
+            {hello}
+          </p>
+          <h1 className="text-[26px] leading-8 font-semibold tracking-[-0.02em]">{name || <Skeleton width={160} height={28} />}</h1>
+        </div>
+        {stats && stats.day_streak > 0 && (
+          <span className="hidden items-center gap-1.5 text-sm font-medium text-on-highlight lg:inline-flex">
+            <Flame size={16} strokeWidth={1.75} fill="var(--antenna)" />
+            {stats.day_streak}-day streak
+          </span>
+        )}
+      </div>
+
+      <Card className="flex flex-col gap-[18px] p-5">
+        <div className="flex items-center gap-[18px]">
+          <ProgressRing progress={(done / goal) * 100} size={72} strokeWidth={6}>
+            <span className="num text-[19px] leading-none">{done}</span>
+            <span className="num text-[11px] text-fg-3">/{goal}</span>
+          </ProgressRing>
+          <div className="flex-1">
+            <p className="text-[13px] text-fg-3">Today’s goal</p>
+            <p className="text-[17px] leading-6 font-semibold">
+              {left > 0 ? `${left} questions to go` : 'Goal done for today'}
+            </p>
+            <p className="mt-0.5 text-[13px] text-fg-3">Answered in battles today</p>
+          </div>
+        </div>
+        <Link href="/battle/new" className="hover:no-underline">
+          <Button size="lg" fullWidth>
+            Start a battle <ArrowRight size={20} strokeWidth={1.75} />
+          </Button>
+        </Link>
+      </Card>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Card interactive onClick={() => router.push('/flashcards')} className="flex flex-col gap-2.5 p-4">
+          <p className="flex items-center gap-1.5 text-[13px] font-medium text-fg-3">
+            <Layers size={16} strokeWidth={1.75} /> Due flashcards
+          </p>
+          <p className="num text-[28px] leading-8 tracking-[-0.03em]" suppressHydrationWarning>
+            {dueCount}
+          </p>
+          <p className="text-[13px] font-medium text-link">{dueCount > 0 ? 'Review now' : 'All caught up'}</p>
+        </Card>
+        <Card interactive onClick={() => router.push('/leaderboard')} className="flex flex-col gap-2.5 p-4">
+          <p className="flex items-center gap-1.5 text-[13px] font-medium text-fg-3">
+            <Trophy size={16} strokeWidth={1.75} /> Rating
+          </p>
+          <p className="num text-[28px] leading-8 tracking-[-0.03em]">{rating.toLocaleString('en-IN')}</p>
+          <RankBadge rating={rating} />
+        </Card>
+      </div>
+
+      <Card className="overflow-hidden p-0">
+        <ListRow
+          icon={<Swords size={18} strokeWidth={1.75} />}
+          title="Quick battle"
+          subtitle="Blitz · Ranked · All subjects"
+          chevron
+          divider
+          onClick={() => router.push('/battle/new?again=1&mode=blitz&cat=all&rated=1')}
+        />
+        <ListRow
+          icon={<NotebookPen size={18} strokeWidth={1.75} />}
+          title="Mistake notebook"
+          subtitle={mistakes ? `${mistakes} questions to revisit` : 'Questions you get wrong land here'}
+          chevron
+          onClick={() => router.push('/flashcards?tab=mistakes')}
+        />
+      </Card>
+
+      {stats && stats.answered_total > 0 && (
+        <p className="text-center text-[13px] text-fg-3">
+          <span className="num">{stats.answered_total.toLocaleString('en-IN')}</span> answered ·{' '}
+          <span className="num">{Math.round((stats.correct_total / stats.answered_total) * 100)}%</span> accuracy
+        </p>
+      )}
     </PageContainer>
   )
 }
 
 export default function HomePage() {
   const { user, loading } = useUser()
-
   if (loading) {
     return (
       <PageContainer>
-        <div className="h-44 rounded-[24px] bg-[var(--color-surface-light-muted)] dark:bg-[var(--color-surface-dark-muted)] animate-pulse" />
+        <Skeleton height={176} radius={16} />
       </PageContainer>
     )
   }
-
-  return user ? <AuthedHome /> : <QuickBattleOnboarding />
+  return user ? <SignedInHome /> : <Landing />
 }
-

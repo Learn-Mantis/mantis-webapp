@@ -1,31 +1,30 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 interface PageContainerProps {
   children: ReactNode
   className?: string
-  /** If true, allows the container to occupy max width on desktop */
+  /** Wider column for dense, two-column desktop pages. */
   fluid?: boolean
+  /** Focus mode (battle / study session): no room reserved for the bottom nav. */
+  focus?: boolean
 }
 
-export function PageContainer({ children, className, fluid = false }: PageContainerProps) {
+/** Calm reading column: 20px gutter, capped at 720px (or wider when fluid). */
+export function PageContainer({ children, className, fluid = false, focus = false }: PageContainerProps) {
   return (
-    <motion.main
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+    <main
       className={cn(
-        'mx-auto w-full px-4 pt-[calc(env(safe-area-inset-top)+14px)] pb-[130px]',
-        'lg:px-8 lg:pt-6 lg:pb-12',
-        fluid ? 'max-w-7xl' : 'max-w-[520px] lg:max-w-6xl xl:max-w-7xl',
-        'flex flex-col gap-6',
+        'mx-auto flex w-full flex-col gap-4 px-5 animate-[mantis-fade_200ms_cubic-bezier(.2,.8,.2,1)]',
+        'pt-[calc(env(safe-area-inset-top)+16px)] lg:pt-8',
+        focus ? 'pb-10' : 'pb-[calc(64px+env(safe-area-inset-bottom)+24px)] lg:pb-12',
+        fluid ? 'max-w-5xl' : 'max-w-[720px]',
         className,
       )}
     >
       {children}
-    </motion.main>
+    </main>
   )
 }

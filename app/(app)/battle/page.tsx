@@ -1,23 +1,26 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Swords, Bot as BotIcon, Link2, Trophy, ChevronRight } from 'lucide-react'
-import { toast } from 'sonner'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Swords, Trophy } from 'lucide-react'
+import { Avatar } from '@/components/ui/Avatar'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { EmptyState, RatingDelta, Skeleton } from '@/components/ui/Feedback'
+import { IconButton } from '@/components/ui/IconButton'
+import { ListRow } from '@/components/ui/ListRow'
 import { PageContainer } from '@/components/layout/PageContainer'
-import { BattleSetupSheet, type SetupAction, type SetupChoice } from '@/components/battle/BattleSetupSheet'
-import { MatchmakingOverlay } from '@/components/battle/MatchmakingOverlay'
-import { LeaderboardModal } from '@/components/battle/LeaderboardModal'
+import { TopBar } from '@/components/layout/TopBar'
 import { RankBadge } from '@/components/battle/RankBadge'
+import { BotAvatar } from '@/components/battle/BattleRun'
 import { useUser } from '@/features/auth/user-provider'
 import { ensurePlayer } from '@/features/auth/guest'
-import { battleApi, BattleApiError, type BattleLogItem, type BattleProfile, type Bot } from '@/features/battle/api'
-import { useMatchmaking } from '@/features/battle/use-matchmaking'
-import { playPath, useStartBattle } from '@/features/battle/use-start-battle'
-import { BATTLE_MODES, type BattleModeKey } from '@/lib/config/battle-modes'
+import { battleApi, type BattleLogItem, type BattleProfile } from '@/features/battle/api'
+import { playPath } from '@/features/battle/use-start-battle'
+import { BATTLE_MODES } from '@/lib/config/battle-modes'
 import { categoryLabel } from '@/lib/config/subjects'
-import { getRank, getNextRank, STARTING_RATING } from '@/lib/config/ranks'
+import { getNextRank, STARTING_RATING } from '@/lib/config/ranks'
 import { cn } from '@/lib/utils'
 
 function timeAgo(iso: string): string {
@@ -32,36 +35,61 @@ function timeAgo(iso: string): string {
 
 function logTitle(item: BattleLogItem): string {
   if (item.kind === 'challenge' && item.role === 'host') {
-    return `Your challenge · ${item.challengers ?? 0} played`
+    const n = item.challengers ?? 0
+    return `Your challenge · ${n} ${n === 1 ? 'friend' : 'friends'}`
   }
   if (item.kind === 'challenge') return `${item.opponent?.username ?? 'Someone'}’s challenge`
-  if (item.kind === 'bot') return `vs ${item.opponent?.username ?? 'Bot'} · Bot`
-  return `vs ${item.opponent?.username ?? 'Opponent'}`
+  if (item.kind === 'bot') return `${item.opponent?.username ?? 'Bot'} bot`
+  return item.opponent?.username ?? 'Opponent'
 }
 
-const ACTIONS: { key: SetupAction; title: string; sub: string; icon: typeof Swords }[] = [
-  { key: 'live', title: 'Find opponent', sub: 'Live 1v1 with a player near your rating', icon: Swords },
-  { key: 'bot', title: 'Practice vs bot', sub: 'Choose a bot by rank. No rating change', icon: BotIcon },
-  { key: 'challenge', title: 'Challenge a friend', sub: 'Play a set, send a one-time link', icon: Link2 },
-]
+function LogRow({ item, divider, onOpen }: { item: BattleLogItem; divider: boolean; onOpen: () => void }) {
+  const showOpp = item.opponent && !(item.kind === 'challenge' && item.role === 'host')
+  const result = !item.finished
+    ? 'Unfinished'
+    : item.outcome === 'win'
+      ? 'Won'
+      : item.outcome === 'loss'
+        ? 'Lost'
+        : item.outcome === 'draw'
+          ? 'Draw'
+          : item.kind === 'challenge'
+            ? 'Shared'
+            : 'Waiting'
+  return (
+    <ListRow
+      divider={divider}
+      onClick={onOpen}
+      leading={item.kind === 'bot' ? <BotAvatar size={36} /> : <Avatar name={logTitle(item)} size={36} />}
+      title={logTitle(item)}
+      subtitle={`${categoryLabel(item.category_id)} · ${BATTLE_MODES[item.mode].label} · ${
+        item.kind === 'bot' ? 'Practice' : item.rated ? 'Ranked' : 'Friendly'
+      } · ${timeAgo(item.played_at)}`}
+      trailing={
+        <span className="flex flex-col items-end gap-1">
+          <span className="num text-[15px] text-fg">
+            {item.score}
+            {showOpp ? ` – ${item.opponent?.score}` : ''}
+          </span>
+          {item.rated && item.rating_delta ? (
+            <RatingDelta value={item.rating_delta} size="sm" showIcon={false} />
+          ) : (
+            <span className={cn('text-xs', item.outcome === 'loss' ? 'text-on-incorrect' : 'text-fg-3')}>{result}</span>
+          )}
+        </span>
+      }
+    />
+  )
+}
 
-function BattleHub() {
+export default function BattlePage() {
   const router = useRouter()
-  const params = useSearchParams()
   const { sessionUser, loading } = useUser()
   const [profile, setProfile] = useState<BattleProfile | null>(null)
   const [log, setLog] = useState<BattleLogItem[] | null>(null)
-  const [bots, setBots] = useState<Bot[]>([])
-  const [setup, setSetup] = useState<SetupAction | null>(null)
-  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
-  const starter = useStartBattle()
-
-  const rating = profile?.rating ?? STARTING_RATING
-  const rank = getRank(rating)
-  const next = getNextRank(rating)
 
   // Only touch the server for people who already have a session; visitors get
-  // a guest session the moment they start a game.
+  // a guest session when they start their first battle.
   useEffect(() => {
     if (loading || !sessionUser) return
     let cancelled = false
@@ -77,253 +105,68 @@ function BattleHub() {
     }
   }, [loading, sessionUser])
 
-  useEffect(() => {
-    battleApi.bots().then(setBots).catch(() => {})
-  }, [])
-
-  const matchmaking = useMatchmaking(
-    useCallback((battleId: string) => router.push(playPath(battleId)), [router]),
-  )
-
-  const fallbackBot = bots.length
-    ? [...bots].sort((a, b) => Math.abs(a.rating - rating) - Math.abs(b.rating - rating))[0]
-    : null
-
-  const startSearch = matchmaking.start
-  const startLive = useCallback(
-    async (mode: BattleModeKey, categoryId: string, rated: boolean) => {
-      try {
-        const p = await ensurePlayer()
-        setProfile(p)
-        startSearch({ mode, categoryId, rated })
-      } catch (e) {
-        toast.error(e instanceof BattleApiError ? e.message : 'Could not start matchmaking.')
-      }
-    },
-    [startSearch],
-  )
-
-  async function handleStart(choice: SetupChoice) {
-    setSetup(null)
-    if (choice.action === 'live') await startLive(choice.mode, choice.categoryId, choice.rated)
-    else if (choice.action === 'bot' && choice.botId) await starter.startBot(choice.botId, choice.mode, choice.categoryId)
-    else if (choice.action === 'challenge') await starter.startChallenge(choice.mode, choice.categoryId, choice.rated)
-  }
-
-  // "Play again" from a live result lands here with the same settings.
-  const againHandled = useRef(false)
-  useEffect(() => {
-    if (againHandled.current || params.get('again') !== 'live') return
-    const mode = params.get('mode') as BattleModeKey | null
-    const cat = params.get('cat')
-    if (!mode || !BATTLE_MODES[mode] || !cat) return
-    const rated = params.get('rated') === '1'
-    const id = setTimeout(() => {
-      againHandled.current = true
-      router.replace('/battle')
-      startLive(mode, cat, rated)
-    }, 0)
-    return () => clearTimeout(id)
-  }, [params, router, startLive])
-
-  async function fallbackToBot() {
-    const s = matchmaking.settings
-    const matched = await matchmaking.cancel()
-    if (matched) return router.push(playPath(matched))
-    if (s && fallbackBot) await starter.startBot(fallbackBot.id, s.mode, s.categoryId)
-  }
-
-  async function fallbackToChallenge() {
-    const s = matchmaking.settings
-    const matched = await matchmaking.cancel()
-    if (matched) return router.push(playPath(matched))
-    if (s) await starter.startChallenge(s.mode, s.categoryId, s.rated)
-  }
-
-  async function cancelSearch() {
-    const matched = await matchmaking.cancel()
-    if (matched) router.push(playPath(matched))
-  }
+  const rating = profile?.rating ?? STARTING_RATING
+  const next = getNextRank(rating)
+  const noSession = !loading && !sessionUser
 
   return (
     <PageContainer>
-      <div className="flex items-end justify-between pt-1">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Battle</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">Quiz duels on real exam-style questions</p>
-        </div>
-        <button
-          onClick={() => setLeaderboardOpen(true)}
-          className="flex items-center gap-1.5 text-sm text-neutral-600 dark:text-neutral-300 hover:text-brand-600"
-        >
-          <Trophy size={16} /> Leaderboard
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-7 flex flex-col gap-6">
-          {/* Rating */}
-          <Card className="p-5 flex items-center gap-4">
-            <RankBadge tier={rank} size={52} />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-neutral-500">
-                {profile ? profile.username : 'Not played yet'}
-                {profile?.is_guest && ' · guest'}
-              </p>
-              <p className="text-3xl font-bold tabular-nums leading-tight">{rating}</p>
-              <p className="text-xs text-neutral-500">
-                {rank.name}
-                {next ? ` · ${next.minRating - rating} to ${next.name}` : ''}
-              </p>
-            </div>
-            {profile && (
-              <div className="text-right text-xs text-neutral-500 leading-5">
-                <p>
-                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">{profile.games}</span> ranked games
-                </p>
-                <p>
-                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">{profile.wins}</span> wins
-                </p>
-              </div>
-            )}
-          </Card>
-
-          {/* Play */}
-          <div className="flex flex-col gap-2.5">
-            {ACTIONS.map((a) => (
-              <Card
-                key={a.key}
-                interactive
-                onClick={() => setSetup(a.key)}
-                className="p-4 flex items-center gap-4 cursor-pointer"
-              >
-                <div
-                  className={cn(
-                    'flex h-11 w-11 items-center justify-center rounded-2xl',
-                    a.key === 'live' ? 'bg-brand-500 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300',
-                  )}
-                >
-                  <a.icon size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold">{a.title}</p>
-                  <p className="text-sm text-neutral-500">{a.sub}</p>
-                </div>
-                <ChevronRight size={18} className="text-neutral-400" />
-              </Card>
-            ))}
-            {!sessionUser && !loading && (
-              <p className="text-xs text-neutral-500 px-1">
-                No account needed — you&rsquo;ll play as a guest. Sign up any time to keep your rating.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* History */}
-        <div className="lg:col-span-5 flex flex-col gap-3">
-          <h2 className="text-sm font-semibold">Recent battles</h2>
-          {log === null && sessionUser && <p className="text-sm text-neutral-500">Loading…</p>}
-          {(log?.length === 0 || (!sessionUser && !loading)) && (
-            <Card className="p-5 text-sm text-neutral-500">Your battles will show up here.</Card>
-          )}
-          {log?.map((item) => {
-            const delta = item.rating_delta
-            return (
-              <Card
-                key={item.battle_id}
-                interactive
-                onClick={() => router.push(playPath(item.battle_id))}
-                className="p-3.5 flex items-center gap-3 cursor-pointer"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{logTitle(item)}</p>
-                  <p className="text-xs text-neutral-500 truncate">
-                    {BATTLE_MODES[item.mode].label} · {categoryLabel(item.category_id)} ·{' '}
-                    {item.kind === 'bot' ? 'Practice' : item.rated ? 'Ranked' : 'Friendly'} · {timeAgo(item.played_at)}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-semibold tabular-nums">
-                    {item.score}
-                    {item.opponent && item.kind !== 'challenge' ? ` – ${item.opponent.score}` : ''}
-                    {item.kind === 'challenge' && item.role === 'challenger' && item.opponent ? ` – ${item.opponent.score}` : ''}
-                  </p>
-                  <p
-                    className={cn(
-                      'text-xs',
-                      !item.finished
-                        ? 'text-neutral-400'
-                        : item.outcome === 'win'
-                          ? 'text-brand-600'
-                          : item.outcome === 'loss'
-                            ? 'text-danger-500'
-                            : 'text-neutral-500',
-                    )}
-                  >
-                    {!item.finished
-                      ? 'Unfinished'
-                      : item.outcome
-                        ? item.outcome === 'win'
-                          ? 'Won'
-                          : item.outcome === 'loss'
-                            ? 'Lost'
-                            : 'Draw'
-                        : item.kind === 'challenge'
-                          ? 'Shared'
-                          : 'Waiting'}
-                    {item.rated && delta ? ` · ${delta > 0 ? '+' : ''}${delta}` : ''}
-                  </p>
-                </div>
-              </Card>
-            )
-          })}
-        </div>
-      </div>
-
-      <BattleSetupSheet
-        open={setup !== null}
-        action={setup ?? 'live'}
-        onClose={() => setSetup(null)}
-        onStart={handleStart}
-        rating={rating}
-        busy={starter.busy}
+      <TopBar
+        large
+        title="Battle"
+        actions={
+          <IconButton label="Leaderboard" onClick={() => router.push('/leaderboard')}>
+            <Trophy size={20} strokeWidth={1.75} />
+          </IconButton>
+        }
       />
 
-      <LeaderboardModal
-        open={leaderboardOpen}
-        onClose={() => setLeaderboardOpen(false)}
-        userRating={rating}
-        userName={profile?.username ?? ''}
-        onChallengeDoctor={() => {
-          setLeaderboardOpen(false)
-          setSetup('challenge')
-          toast.info('Play a set, then send them the link.')
-        }}
-      />
+      <Card className="flex items-center gap-4 p-5">
+        <Avatar name={profile?.username ?? 'You'} size={48} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm text-fg-2">
+            {profile ? profile.username : 'You'}
+            {profile?.is_guest && <span className="text-fg-3"> · guest</span>}
+          </p>
+          <RankBadge rating={rating} size="md" className="mt-1" />
+        </div>
+        <div className="text-right">
+          <p className="num text-[28px] leading-8 tracking-[-0.03em]">{rating.toLocaleString('en-IN')}</p>
+          <p className="text-xs text-fg-3">{next ? `${next.minRating - rating} to ${next.name}` : 'Top rank'}</p>
+        </div>
+      </Card>
 
-      {matchmaking.settings && (
-        <MatchmakingOverlay
-          mode={matchmaking.settings.mode}
-          categoryId={matchmaking.settings.categoryId}
-          rated={matchmaking.settings.rated}
-          waited={matchmaking.waited}
-          showFallback={matchmaking.showFallback}
-          error={matchmaking.error}
-          fallbackBot={fallbackBot ? { name: fallbackBot.name, rating: fallbackBot.rating } : null}
-          onCancel={cancelSearch}
-          onPlayBot={fallbackToBot}
-          onChallenge={fallbackToChallenge}
-        />
+      <Link href="/battle/new" className="hover:no-underline">
+        <Button size="lg" fullWidth>
+          <Swords size={20} strokeWidth={1.75} /> New battle
+        </Button>
+      </Link>
+      {noSession && (
+        <p className="text-center text-[13px] text-fg-3">No account needed. You’ll play as a guest.</p>
+      )}
+
+      <h2 className="mt-2 text-[15px] font-semibold">Recent battles</h2>
+      {log === null && sessionUser ? (
+        <Card className="flex flex-col gap-4 p-4">
+          <Skeleton lines={2} />
+          <Skeleton lines={2} />
+        </Card>
+      ) : !log?.length ? (
+        <Card>
+          <EmptyState
+            compact
+            icon={<Swords size={24} strokeWidth={1.75} />}
+            title="No battles yet"
+            body="Your battles and challenges will show up here."
+          />
+        </Card>
+      ) : (
+        <Card className="overflow-hidden p-0">
+          {log.map((item, i) => (
+            <LogRow key={item.battle_id} item={item} divider={i < log.length - 1} onOpen={() => router.push(playPath(item.battle_id))} />
+          ))}
+        </Card>
       )}
     </PageContainer>
-  )
-}
-
-export default function BattlePage() {
-  return (
-    <Suspense>
-      <BattleHub />
-    </Suspense>
   )
 }

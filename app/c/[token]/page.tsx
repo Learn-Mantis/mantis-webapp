@@ -3,10 +3,16 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import { Link2Off, Lock } from 'lucide-react'
 import { toast } from 'sonner'
-import { Card } from '@/components/ui/Card'
+import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { EmptyState } from '@/components/ui/Feedback'
 import { MantisLogo } from '@/components/ui/Logo'
+import { Sheet } from '@/components/ui/Sheet'
+import { StickyFooter } from '@/components/layout/TopBar'
+import { RankBadge } from '@/components/battle/RankBadge'
 import { ensurePlayer } from '@/features/auth/guest'
 import { useUser } from '@/features/auth/user-provider'
 import { battleApi, BattleApiError, type ChallengePeek } from '@/features/battle/api'
@@ -16,12 +22,12 @@ import { categoryLabel } from '@/lib/config/subjects'
 
 const DEAD_ENDS: Record<string, { title: string; body: string }> = {
   not_found: { title: 'Link not found', body: 'Check that you copied the whole link.' },
-  used: { title: 'This link has been used', body: 'Each challenge link can be played once. Ask for a new one.' },
+  used: { title: 'This link has been used', body: 'Each challenge link can be played once. Ask your friend for a new one.' },
   expired: { title: 'This challenge has expired', body: 'Challenge links last 24 hours.' },
-  own_challenge: { title: 'This is your own challenge', body: 'Send this link to a friend — it works once.' },
+  own_challenge: { title: 'This is your own link', body: 'Send it to a friend. It can be played once.' },
 }
 
-/** Landing page for a shared challenge link. */
+/** Landing page for a shared challenge link. Works signed out. */
 export default function ChallengeLinkPage() {
   const { token } = useParams<{ token: string }>()
   const router = useRouter()
@@ -57,97 +63,99 @@ export default function ChallengeLinkPage() {
   const mode = peek?.mode ? BATTLE_MODES[peek.mode] : null
 
   return (
-    <main className="min-h-screen bg-[var(--color-bg-light)] dark:bg-[var(--color-bg-dark)] flex flex-col items-center px-4 py-8">
-      <Link href="/" className="mb-10">
-        <MantisLogo size={36} withText />
-      </Link>
+    <main className="mx-auto flex min-h-svh w-full max-w-[440px] flex-col bg-app px-5">
+      <header className="flex h-14 items-center">
+        <MantisLogo size={20} href="/" />
+      </header>
 
-      <Card className="w-full max-w-md p-6 flex flex-col gap-5">
-        {!peek && <p className="text-sm text-neutral-500 text-center">Loading challenge…</p>}
+      {!peek && <p className="mt-24 text-center text-sm text-fg-3">Loading challenge…</p>}
 
-        {deadEnd && (
-          <>
-            <div className="text-center">
-              <h1 className="text-lg font-semibold">{deadEnd.title}</h1>
-              <p className="text-sm text-neutral-500 mt-1">{deadEnd.body}</p>
+      {deadEnd && (
+        <div className="flex flex-1 flex-col justify-center">
+          <EmptyState
+            icon={<Link2Off size={24} strokeWidth={1.75} />}
+            title={deadEnd.title}
+            body={deadEnd.body}
+            action={
+              <Link href="/battle/new" className="hover:no-underline">
+                <Button>Start your own battle</Button>
+              </Link>
+            }
+          />
+        </div>
+      )}
+
+      {peek?.status === 'yours' && peek.battle_id && (
+        <div className="flex flex-1 flex-col justify-center gap-4 text-center">
+          <h1 className="text-[21px] leading-7 font-semibold">You’ve started this challenge</h1>
+          <p className="text-[15px] text-fg-3">Pick up where you left off. The clock kept running.</p>
+          <Button size="lg" fullWidth onClick={() => router.push(playPath(peek.battle_id!))}>
+            Continue
+          </Button>
+        </div>
+      )}
+
+      {peek?.status === 'open' && mode && peek.host && (
+        <>
+          <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+            <Avatar name={peek.host.username} size={80} />
+            <div className="flex flex-col items-center gap-1.5">
+              <h1 className="text-[21px] leading-7 font-semibold tracking-[-0.02em]">{peek.host.username} challenged you</h1>
+              <RankBadge rating={peek.host.rating} showRating />
             </div>
-            <Link href="/battle">
-              <Button className="w-full">Make your own challenge</Button>
-            </Link>
-          </>
-        )}
-
-        {peek?.status === 'yours' && peek.battle_id && (
-          <>
-            <div className="text-center">
-              <h1 className="text-lg font-semibold">You started this challenge</h1>
-              <p className="text-sm text-neutral-500 mt-1">Pick up where you left off — the clock kept running.</p>
-            </div>
-            <Button className="w-full" onClick={() => router.push(playPath(peek.battle_id!))}>
-              Continue
-            </Button>
-          </>
-        )}
-
-        {peek?.status === 'open' && mode && (
-          <>
-            <div className="text-center">
-              <p className="text-sm text-neutral-500">{peek.host?.username} challenged you</p>
-              <h1 className="text-2xl font-bold mt-1">
-                Beat {peek.host_score}
-                {peek.question_count ? ` / ${peek.question_count}` : ''}
-              </h1>
-            </div>
-
-            <dl className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-xl bg-neutral-50 dark:bg-neutral-800/50 py-2.5">
-                <dt className="text-[11px] text-neutral-500">Mode</dt>
-                <dd className="text-sm font-medium">{mode.label}</dd>
-              </div>
-              <div className="rounded-xl bg-neutral-50 dark:bg-neutral-800/50 py-2.5">
-                <dt className="text-[11px] text-neutral-500">Subjects</dt>
-                <dd className="text-sm font-medium truncate px-1">{categoryLabel(peek.category_id ?? 'all')}</dd>
-              </div>
-              <div className="rounded-xl bg-neutral-50 dark:bg-neutral-800/50 py-2.5">
-                <dt className="text-[11px] text-neutral-500">Type</dt>
-                <dd className="text-sm font-medium">{peek.rated ? 'Ranked' : 'Friendly'}</dd>
-              </div>
-            </dl>
-            <p className="text-xs text-neutral-500 text-center -mt-2">{mode.description}</p>
-
-            {!confirming ? (
-              <Button size="lg" onClick={() => setConfirming(true)}>
-                Play challenge
-              </Button>
-            ) : (
-              <div className="flex flex-col gap-3 rounded-2xl border border-gold-500/40 bg-gold-500/10 p-4">
-                <p className="text-sm font-semibold">This link can only be played once.</p>
-                <p className="text-sm text-neutral-600 dark:text-neutral-300">
-                  As soon as you start, it&rsquo;s used up — even if you close the page. Ready to play now?
-                </p>
-                <div className="flex gap-2">
-                  <Button className="flex-1" disabled={starting} onClick={start}>
-                    {starting ? 'Starting…' : 'Start now'}
-                  </Button>
-                  <Button variant="secondary" className="flex-1" disabled={starting} onClick={() => setConfirming(false)}>
-                    Not now
-                  </Button>
+            <Card tone="sunken" className="flex justify-center gap-6 px-5 py-3.5">
+              {[
+                [categoryLabel(peek.category_id ?? 'all'), 'Subjects'],
+                [mode.label, 'Mode'],
+                [peek.question_count ? String(peek.question_count) : '5 min', peek.question_count ? 'Questions' : 'Time'],
+                [peek.rated ? 'Ranked' : 'Friendly', 'Type'],
+              ].map(([v, l]) => (
+                <div key={l}>
+                  <p className="text-[15px] font-semibold text-fg">{v}</p>
+                  <p className="text-xs text-fg-3">{l}</p>
                 </div>
-              </div>
-            )}
+              ))}
+            </Card>
+            <p className="text-sm text-fg-3">Their score stays hidden until you finish.</p>
+          </div>
 
+          <StickyFooter>
+            <Button size="lg" fullWidth onClick={() => setConfirming(true)}>
+              Play challenge
+            </Button>
             {!sessionUser && (
-              <p className="text-xs text-neutral-500 text-center">
-                No account needed — you&rsquo;ll play as a guest.{' '}
-                <Link href={`/login?next=/c/${token}`} className="text-brand-600 hover:underline">
-                  Log in
-                </Link>{' '}
-                to play with your rating.
+              <p className="text-center text-[13px] text-fg-3">
+                No account needed.{' '}
+                <Link href={`/login?next=/c/${token}`}>Log in</Link> to play with your rating.
               </p>
             )}
-          </>
-        )}
-      </Card>
+          </StickyFooter>
+
+          <Sheet
+            open={confirming}
+            onClose={() => !starting && setConfirming(false)}
+            showClose={false}
+            footer={
+              <>
+                <Button size="lg" fullWidth loading={starting} onClick={start}>
+                  Start now
+                </Button>
+                <Button variant="ghost" fullWidth disabled={starting} onClick={() => setConfirming(false)}>
+                  Not now
+                </Button>
+              </>
+            }
+          >
+            <div className="flex flex-col gap-2 pt-1">
+              <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-sunken text-fg">
+                <Lock size={22} strokeWidth={1.75} />
+              </div>
+              <p className="text-[19px] leading-[26px] font-semibold text-fg">This link can only be played once</p>
+              <p className="text-[15px] text-fg-2">Once you start, leaving counts as finished. Start now?</p>
+            </div>
+          </Sheet>
+        </>
+      )}
     </main>
   )
 }

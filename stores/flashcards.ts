@@ -203,7 +203,7 @@ export const useFlashcardStore = create<FlashcardState>()(
 
       addFromMistake: ({ question, correctAnswer, explanation, clinicalPearl, subject }) => {
         // Ensure Mistake Deck exists
-        let mistakeDeck = get().decks.find((d) => d.id === MISTAKE_DECK_ID)
+        const mistakeDeck = get().decks.find((d) => d.id === MISTAKE_DECK_ID)
         if (!mistakeDeck) {
           set((state) => ({ decks: [INITIAL_MISTAKE_DECK, ...state.decks] }))
         }

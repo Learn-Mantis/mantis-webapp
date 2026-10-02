@@ -11,21 +11,18 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ title, action, onAction, subtitle, icon }: SectionHeaderProps) {
   return (
-    <div className="flex items-end justify-between mb-3.5 px-0.5">
+    <div className="mb-3 flex items-end justify-between gap-3">
       <div className="flex flex-col gap-0.5">
         <div className="flex items-center gap-2">
           {icon}
-          <h2 className="text-[19px] font-bold tracking-tight font-[var(--font-display)]">{title}</h2>
+          <h2 className="text-[17px] leading-6 font-semibold tracking-[-0.01em]">{title}</h2>
         </div>
-        {subtitle && <p className="text-xs text-neutral-500 dark:text-neutral-400">{subtitle}</p>}
+        {subtitle && <p className="text-[13px] text-fg-3">{subtitle}</p>}
       </div>
       {action && (
-        <button
-          onClick={onAction}
-          className="flex items-center gap-0.5 text-sm font-semibold text-brand-600 dark:text-brand-400"
-        >
+        <button onClick={onAction} className="flex items-center gap-0.5 text-sm font-medium text-link">
           {action}
-          <ChevronRight size={16} />
+          <ChevronRight size={16} strokeWidth={1.75} />
         </button>
       )}
     </div>

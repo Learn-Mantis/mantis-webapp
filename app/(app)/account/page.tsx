@@ -1,250 +1,336 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { getSupabaseBrowserClient } from '@/lib/supabase/client'
-import type { Database } from '@/types/database'
 import {
-  Sun,
-  Moon,
-  LogIn,
-  UserPlus,
-  Swords,
-  ShieldCheck,
-  Bell,
-  Lock,
-  Sparkles,
-  HelpCircle,
-  LogOut,
-  ChevronRight,
-  Trophy,
+  AtSign,
   BookOpen,
+  Building2,
+  CalendarDays,
   Flame,
+  GraduationCap,
+  KeyRound,
+  Mail,
+  MapPin,
+  Moon,
+  Phone,
+  ShieldCheck,
+  Sun,
+  Target,
+  Trophy,
+  User as UserIcon,
 } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
+import { toast } from 'sonner'
 import { Avatar } from '@/components/ui/Avatar'
-import { Toggle } from '@/components/ui/Toggle'
-import { SectionHeader } from '@/components/ui/SectionHeader'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { ChoiceCard } from '@/components/ui/ChoiceCard'
+import { EmptyState, Skeleton } from '@/components/ui/Feedback'
+import { PasswordField, TextField } from '@/components/ui/Field'
+import { ListRow } from '@/components/ui/ListRow'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { Sheet } from '@/components/ui/Sheet'
 import { StatTile } from '@/components/ui/StatTile'
 import { PageContainer } from '@/components/layout/PageContainer'
+import { TopBar } from '@/components/layout/TopBar'
+import { RankBadge } from '@/components/battle/RankBadge'
 import { useTheme } from '@/lib/theme'
 import { useUser } from '@/features/auth/user-provider'
-import { useDisplayName } from '@/features/auth/use-display-name'
+import { ensurePlayer } from '@/features/auth/guest'
+import { battleApi, type BattleProfile, type MyStats } from '@/features/battle/api'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { INDIAN_STATES } from '@/lib/config/geo'
 
-function AppearanceToggle() {
-  const { theme, toggleTheme, mounted } = useTheme()
+const BATCHES = ['1st year', '2nd year', '3rd year', 'Final year', 'Internship', 'Post internship']
+const EXAMS = ['NEET-PG', 'INI-CET', 'Both']
+const USERNAME_RE = /^[a-z0-9_]{3,20}$/
+
+type Field = 'full_name' | 'phone' | 'college' | 'state' | 'batch' | 'exam' | 'exam_year' | 'daily_goal' | 'username' | 'password'
+
+interface Meta {
+  full_name?: string
+  phone?: string
+  college?: string
+  state?: string
+  batch?: string
+  exam?: string
+  exam_year?: string
+  daily_goal?: number
+}
+
+const TITLES: Record<Field, string> = {
+  full_name: 'Name',
+  phone: 'Phone',
+  college: 'Medical college',
+  state: 'State',
+  batch: 'Year',
+  exam: 'Preparing for',
+  exam_year: 'Exam year',
+  daily_goal: 'Daily goal',
+  username: 'Username',
+  password: 'Change password',
+}
+
+function likeExact(s: string) {
+  return s.replace(/[\\%_]/g, (m) => `\\${m}`)
+}
+
+function AppearanceControl() {
+  const { theme, setTheme, mounted } = useTheme()
   return (
-    <div className="flex items-center gap-3.5 px-4 py-3.5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
-        {mounted && theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-      </div>
-      <span className="flex-1 text-sm font-semibold">Dark Mode</span>
-      <Toggle checked={mounted && theme === 'dark'} onChange={toggleTheme} />
-    </div>
+    <SegmentedControl
+      value={mounted ? theme : 'light'}
+      onChange={(v) => setTheme(v)}
+      options={[
+        { value: 'light', label: 'Light', icon: <Sun size={16} strokeWidth={1.75} /> },
+        { value: 'dark', label: 'Dark', icon: <Moon size={16} strokeWidth={1.75} /> },
+      ]}
+    />
   )
 }
 
-function GuestAccount() {
+function SignedInAccount() {
+  const router = useRouter()
+  const { user, signOut } = useUser()
+  const [profile, setProfile] = useState<BattleProfile | null>(null)
+  const [stats, setStats] = useState<MyStats | null>(null)
+  const [meta, setMeta] = useState<Meta>(() => (user?.user_metadata ?? {}) as Meta)
+  const [editing, setEditing] = useState<Field | null>(null)
+  const [draft, setDraft] = useState('')
+  const [draft2, setDraft2] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ensurePlayer().then((p) => !cancelled && setProfile(p)).catch(() => {})
+    battleApi.myStats().then((s) => !cancelled && setStats(s)).catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  function open(field: Field) {
+    setError(null)
+    setDraft2('')
+    setDraft(
+      field === 'username'
+        ? profile?.username ?? ''
+        : field === 'password'
+          ? ''
+          : String(meta[field as keyof Meta] ?? (field === 'daily_goal' ? 50 : '')),
+    )
+    setEditing(field)
+  }
+
+  async function save(value = draft) {
+    if (!editing) return
+    const supabase = getSupabaseBrowserClient()
+    if (!supabase || !user) return
+    setSaving(true)
+    setError(null)
+    try {
+      if (editing === 'password') {
+        if (value.length < 8) throw new Error('Password needs at least 8 characters')
+        if (value !== draft2) throw new Error('Passwords don’t match')
+        const { error: e } = await supabase.auth.updateUser({ password: value })
+        if (e) throw e
+        toast.success('Password changed')
+      } else if (editing === 'username') {
+        const name = value.trim().toLowerCase()
+        if (!USERNAME_RE.test(name)) throw new Error('3–20 characters: letters, numbers and underscores')
+        if (name !== profile?.username) {
+          const { data: taken } = await supabase
+            .from('battle_profiles')
+            .select('user_id')
+            .ilike('battle_username', likeExact(name))
+            .neq('user_id', user.id)
+            .limit(1)
+          if (taken?.length) throw new Error('That username is taken')
+          const { error: e } = await supabase.from('battle_profiles').update({ battle_username: name }).eq('user_id', user.id)
+          if (e) throw e
+          setProfile((p) => (p ? { ...p, username: name } : p))
+        }
+      } else {
+        const v = editing === 'daily_goal' ? Number(value) : value.trim()
+        if (editing === 'phone' && String(v).replace(/\D/g, '').length < 10) throw new Error('Enter a valid phone number')
+        if (editing === 'full_name' && String(v).length < 2) throw new Error('Enter your name')
+        const { error: e } = await supabase.auth.updateUser({ data: { [editing]: v, ...(editing === 'full_name' ? { name: v } : {}) } })
+        if (e) throw e
+        // Keep the private profile row in step for the fields it stores.
+        if (editing === 'full_name' || editing === 'college' || editing === 'state') {
+          const row: { full_name?: string; college?: string; state?: string } = { [editing]: String(v) }
+          await supabase.from('profiles').update(row).eq('id', user.id)
+        }
+        setMeta((m) => ({ ...m, [editing]: v }))
+      }
+      setEditing(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function logOut() {
+    await signOut()
+    router.push('/')
+  }
+
+  const accuracy = stats?.answered_total ? Math.round((stats.correct_total / stats.answered_total) * 100) : null
+  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n))
+  const choiceField = editing === 'batch' || editing === 'exam' || editing === 'state'
+  const choices = editing === 'batch' ? BATCHES : editing === 'exam' ? EXAMS : editing === 'state' ? [...INDIAN_STATES] : []
+
   return (
     <PageContainer>
-      <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight font-[var(--font-display)] pt-1">Account</h1>
+      <TopBar large title="Profile" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-        <div className="lg:col-span-7">
-          <Card className="relative overflow-hidden p-8 flex flex-col items-center text-center gap-5 shadow-xl">
-            <div className="absolute -top-16 left-1/2 -translate-x-1/2 h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />
-            <div className="relative flex h-20 w-20 items-center justify-center rounded-[24px] bg-gradient-to-b from-brand-400 to-brand-600 shadow-[var(--shadow-glow-brand)]">
-              <Swords size={36} className="text-white" strokeWidth={2} />
-            </div>
-            <div className="relative max-w-sm">
-              <h2 className="text-2xl font-black font-[var(--font-display)]">Join Mantis</h2>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1.5 leading-relaxed">
-                Battle other medical students, track your rating on college leaderboards, and build flashcard decks that stick.
-              </p>
-            </div>
-            <div className="relative w-full max-w-xs flex flex-col gap-3 mt-1">
-              <Link href="/onboarding">
-                <Button size="lg" className="w-full font-bold">
-                  <UserPlus size={18} /> Create Account
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button size="lg" variant="secondary" className="w-full font-semibold">
-                  <LogIn size={18} /> Log In
-                </Button>
-              </Link>
-            </div>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-5 flex flex-col gap-4">
-          <SectionHeader title="Preferences" />
-          <Card className="p-1.5">
-            <AppearanceToggle />
-          </Card>
+      <div className="flex items-center gap-3.5">
+        <Avatar name={profile?.username ?? meta.full_name ?? 'You'} size={56} />
+        <div className="min-w-0">
+          <p className="truncate text-[17px] font-semibold">{profile?.username ?? <Skeleton width={140} height={20} />}</p>
+          {profile && <RankBadge rating={profile.rating} showRating />}
         </div>
       </div>
+
+      <div className="grid grid-cols-3 gap-2.5">
+        <StatTile icon={Flame} label="Streak" value={stats?.day_streak ?? '–'} unit={stats?.day_streak === 1 ? 'day' : 'days'} />
+        <StatTile label="Answered" value={stats ? fmt(stats.answered_total) : '–'} />
+        <StatTile label="Accuracy" value={accuracy ?? '–'} unit={accuracy != null ? '%' : undefined} />
+      </div>
+
+      <h2 className="mt-2 text-[15px] font-semibold">Appearance</h2>
+      <AppearanceControl />
+
+      <h2 className="mt-2 text-[15px] font-semibold">Study</h2>
+      <Card className="overflow-hidden p-0">
+        <ListRow icon={<Target size={18} strokeWidth={1.75} />} title="Daily goal" trailing={<span className="num">{meta.daily_goal ?? 50} Qs</span>} chevron divider onClick={() => open('daily_goal')} />
+        <ListRow icon={<BookOpen size={18} strokeWidth={1.75} />} title="Preparing for" trailing={meta.exam ?? 'Add'} chevron divider onClick={() => open('exam')} />
+        <ListRow icon={<CalendarDays size={18} strokeWidth={1.75} />} title="Exam year" trailing={meta.exam_year ?? 'Add'} chevron divider onClick={() => open('exam_year')} />
+        <ListRow icon={<Trophy size={18} strokeWidth={1.75} />} title="Leaderboard" chevron onClick={() => router.push('/leaderboard')} />
+      </Card>
+
+      <h2 className="mt-2 text-[15px] font-semibold">About you</h2>
+      <Card className="overflow-hidden p-0">
+        <ListRow icon={<UserIcon size={18} strokeWidth={1.75} />} title="Name" subtitle={meta.full_name || 'Add your name'} chevron divider onClick={() => open('full_name')} />
+        <ListRow icon={<Phone size={18} strokeWidth={1.75} />} title="Phone" subtitle={meta.phone || 'Add your phone'} chevron divider onClick={() => open('phone')} />
+        <ListRow icon={<Building2 size={18} strokeWidth={1.75} />} title="Medical college" subtitle={meta.college || 'Add your college'} chevron divider onClick={() => open('college')} />
+        <ListRow icon={<MapPin size={18} strokeWidth={1.75} />} title="State" subtitle={meta.state || 'Add your state'} chevron divider onClick={() => open('state')} />
+        <ListRow icon={<GraduationCap size={18} strokeWidth={1.75} />} title="Year" subtitle={meta.batch || 'Add your year'} chevron onClick={() => open('batch')} />
+      </Card>
+      <p className="-mt-1 text-[13px] text-fg-3">Private. Only you can see these.</p>
+
+      <h2 className="mt-2 text-[15px] font-semibold">Account</h2>
+      <Card className="overflow-hidden p-0">
+        <ListRow icon={<AtSign size={18} strokeWidth={1.75} />} title="Username" subtitle={profile?.username} chevron divider onClick={() => open('username')} />
+        <ListRow icon={<Mail size={18} strokeWidth={1.75} />} title="Email" subtitle={user?.email} divider />
+        <ListRow icon={<KeyRound size={18} strokeWidth={1.75} />} title="Change password" chevron divider onClick={() => open('password')} />
+        <ListRow icon={<ShieldCheck size={18} strokeWidth={1.75} />} title="Privacy" subtitle="Others only see your username" />
+      </Card>
+
+      <Button variant="ghost" fullWidth onClick={logOut}>
+        Log out
+      </Button>
+
+      <Sheet
+        open={editing !== null}
+        onClose={() => !saving && setEditing(null)}
+        title={editing ? TITLES[editing] : ''}
+        footer={
+          !choiceField && (
+            <Button size="lg" fullWidth loading={saving} onClick={() => save()}>
+              Save
+            </Button>
+          )
+        }
+      >
+        {editing === 'password' ? (
+          <div className="flex flex-col gap-4 pt-1">
+            <PasswordField label="New password" autoComplete="new-password" hint="At least 8 characters" value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <PasswordField label="Confirm password" autoComplete="new-password" value={draft2} onChange={(e) => setDraft2(e.target.value)} error={error} />
+          </div>
+        ) : editing === 'daily_goal' || editing === 'exam_year' ? (
+          <div className="flex flex-col gap-3 pt-1">
+            <SegmentedControl
+              value={draft}
+              onChange={setDraft}
+              options={
+                editing === 'daily_goal'
+                  ? ['25', '50', '100'].map((v) => ({ value: v, label: `${v} Qs` }))
+                  : ['2026', '2027', '2028'].map((v) => ({ value: v, label: v }))
+              }
+            />
+            {error && <p className="text-[13px] text-on-incorrect">{error}</p>}
+          </div>
+        ) : choiceField ? (
+          <div className="flex flex-col gap-2 pt-1">
+            {choices.map((c) => (
+              <ChoiceCard key={c} title={c} selected={draft === c} onClick={() => save(c)} disabled={saving} />
+            ))}
+            {error && <p className="text-[13px] text-on-incorrect">{error}</p>}
+          </div>
+        ) : editing ? (
+          <div className="pt-1">
+            <TextField
+              label={TITLES[editing]}
+              autoFocus
+              type={editing === 'phone' ? 'tel' : 'text'}
+              autoCapitalize={editing === 'username' ? 'none' : undefined}
+              leading={editing === 'username' ? <AtSign size={18} strokeWidth={1.75} /> : undefined}
+              value={draft}
+              onChange={(e) => setDraft(editing === 'username' ? e.target.value.toLowerCase().replace(/\s+/g, '_') : e.target.value)}
+              hint={editing === 'username' ? 'Shown in battles and leaderboards instead of your name.' : undefined}
+              error={error}
+            />
+          </div>
+        ) : null}
+      </Sheet>
     </PageContainer>
   )
 }
 
-function AuthedAccount() {
-  const { user, signOut } = useUser()
-  const name = useDisplayName()
-  const router = useRouter()
-
-  const [rating, setRating] = useState(1000)
-  const [streak, setStreak] = useState(0)
-  const [games, setGames] = useState(0)
-  const [wins, setWins] = useState(0)
-  const [battleUsername, setBattleUsername] = useState('')
-  const [college, setCollege] = useState('')
-  const [batch, setBatch] = useState('')
-
-  useEffect(() => {
-    if (!user) return
-    const meta = user.user_metadata as { college?: string; batch?: string; battle_username?: string } | undefined
-    if (meta?.college) setCollege(meta.college)
-    if (meta?.batch) setBatch(meta.batch)
-    if (meta?.battle_username) setBattleUsername(meta.battle_username)
-
-    const supabase = getSupabaseBrowserClient()
-    if (!supabase) return
-
-    supabase
-      .from('battle_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-      .then(({ data }) => {
-        const profile = data as Database['public']['Tables']['battle_profiles']['Row'] | null
-        if (profile) {
-          if (typeof profile.rating === 'number') setRating(profile.rating)
-          if (typeof profile.current_streak === 'number') setStreak(profile.current_streak)
-          if (typeof profile.games === 'number') setGames(profile.games)
-          if (typeof profile.wins === 'number') setWins(profile.wins)
-          if (profile.battle_username) setBattleUsername(profile.battle_username)
-          if (profile.college) setCollege(profile.college)
-        }
-      })
-  }, [user])
-
-  const initials =
-    name
-      .split(' ')
-      .map((s) => s[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || 'DR'
-
-  async function handleSignOut() {
-    await signOut()
-    toast.success('Signed out')
-    router.push('/')
-  }
-
+function VisitorAccount() {
+  const { isGuest } = useUser()
   return (
     <PageContainer>
-      <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight font-[var(--font-display)] pt-1">Account & Settings</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-        {/* Left Column (5 of 12) */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          {/* Profile header */}
-          <Card className="p-6 flex flex-col items-center gap-3.5 text-center relative overflow-hidden shadow-md">
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 h-44 w-44 rounded-full bg-brand-500/10 blur-2xl" />
-            <Avatar initials={initials} size={88} ring />
-            <div>
-              <p className="text-xl font-black font-[var(--font-display)]">{name}</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{user?.email}</p>
-              {college && <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 mt-1">{college}</p>}
-              {batch && <span className="inline-block text-[11px] font-bold text-neutral-400 mt-0.5">{batch}</span>}
+      <TopBar large title="Profile" />
+      <Card>
+        <EmptyState
+          icon={<UserIcon size={24} strokeWidth={1.75} />}
+          title={isGuest ? 'You’re playing as a guest' : 'Your profile lives here'}
+          body={
+            isGuest
+              ? 'Sign up to keep your rating and battles. Your guest games come with you.'
+              : 'Log in to see your rating, streak and settings.'
+          }
+          action={
+            <div className="flex gap-2">
+              <Link href="/signup" className="hover:no-underline">
+                <Button>Sign up</Button>
+              </Link>
+              <Link href="/login" className="hover:no-underline">
+                <Button variant="secondary">Log in</Button>
+              </Link>
             </div>
-          </Card>
-
-          {/* Battle profile (separate identity) */}
-          <Card className="p-4 flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
-              <Swords size={22} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm">Battle Profile</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                {battleUsername ? `@${battleUsername}` : 'Anonymous competitive identity'}
-              </p>
-            </div>
-            <span className="flex items-center gap-1.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 px-3 py-1.5 text-xs font-bold shrink-0">
-              <Trophy size={13} /> {rating} Elo
-            </span>
-          </Card>
-
-          {/* Stats */}
-          <div>
-            <SectionHeader title="Performance Stats" />
-            <div className="grid grid-cols-3 gap-3">
-              <StatTile icon={BookOpen} label="Win Rate" value={games > 0 ? `${Math.round((wins / games) * 100)}%` : '100%'} tone="brand" />
-              <StatTile icon={Swords} label="Battles" value={String(games)} tone="gold" />
-              <StatTile icon={Flame} label="Streak" value={`${streak}d`} tone="info" />
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column (7 of 12) */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
-          <SectionHeader title="Preferences & Account" />
-          <Card className="p-1.5 flex flex-col divide-y divide-[var(--color-surface-light-border)] dark:divide-[var(--color-surface-dark-border)] shadow-md">
-            <AppearanceToggle />
-            {[
-              { icon: ShieldCheck, label: 'Battle Username & Avatar', desc: 'Manage your in-game identity' },
-              { icon: Bell, label: 'Notifications & Reminders', desc: 'Daily goals and battle alerts' },
-              { icon: Lock, label: 'Privacy & Security', desc: 'Leaderboard visibility controls' },
-              { icon: Sparkles, label: 'Subscription & Membership', desc: 'Free Beta Tier' },
-              { icon: HelpCircle, label: 'Help & Feedback', desc: 'Report errors or request features' },
-            ].map((item) => (
-              <button
-                key={item.label}
-                onClick={() => toast('Coming in a later update')}
-                className="flex items-center gap-3.5 px-4 py-3.5 w-full text-left hover:bg-neutral-500/5 transition-colors"
-              >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-surface-light-muted)] dark:bg-[var(--color-surface-dark-muted)] text-neutral-500 dark:text-neutral-300 shrink-0">
-                  <item.icon size={16} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{item.label}</p>
-                  <p className="text-[11px] text-neutral-400 truncate">{item.desc}</p>
-                </div>
-                <ChevronRight size={16} className="text-neutral-400 shrink-0" />
-              </button>
-            ))}
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-3.5 px-4 py-3.5 w-full text-left hover:bg-danger-500/5 transition-colors"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-danger-500/10 text-danger-500 shrink-0">
-                <LogOut size={16} />
-              </div>
-              <span className="flex-1 text-sm font-semibold text-danger-500">Sign Out</span>
-            </button>
-          </Card>
-        </div>
-      </div>
+          }
+        />
+      </Card>
+      <h2 className="mt-2 text-[15px] font-semibold">Appearance</h2>
+      <AppearanceControl />
     </PageContainer>
   )
 }
 
 export default function AccountPage() {
   const { user, loading } = useUser()
-
   if (loading) {
     return (
       <PageContainer>
-        <div className="h-44 rounded-[24px] bg-[var(--color-surface-light-muted)] dark:bg-[var(--color-surface-dark-muted)] animate-pulse" />
+        <Skeleton height={56} radius={16} />
       </PageContainer>
     )
   }
-
-  return user ? <AuthedAccount /> : <GuestAccount />
+  return user ? <SignedInAccount /> : <VisitorAccount />
 }

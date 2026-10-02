@@ -3,210 +3,134 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
-import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Input, Label } from '@/components/ui/Field'
+import { EmptyState } from '@/components/ui/Feedback'
+import { PasswordField, TextField } from '@/components/ui/Field'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
-import { MantisLogo } from '@/components/ui/Logo'
+import { TopBar } from '@/components/layout/TopBar'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { signInWithGoogle, NOT_CONFIGURED } from '@/features/auth/actions'
 
+function safeNext(): string {
+  const next = new URLSearchParams(window.location.search).get('next')
+  // Same-site paths only (e.g. back to a challenge link).
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/'
+}
+
 export default function LoginPage() {
+  const router = useRouter()
+  const [mode, setMode] = useState<'login' | 'forgot' | 'sent'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [forgotMode, setForgotMode] = useState(false)
-  const [resetSent, setResetSent] = useState(false)
-  const router = useRouter()
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     const supabase = getSupabaseBrowserClient()
-    if (!supabase) {
-      toast.info(NOT_CONFIGURED)
-      return
-    }
+    if (!supabase) return toast.info(NOT_CONFIGURED)
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     setLoading(false)
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    toast.success('Welcome back')
-    // Return to where the person came from (e.g. a challenge link). Same-site paths only.
-    const next = new URLSearchParams(window.location.search).get('next')
-    router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/')
+    if (error) return toast.error(error.message)
+    router.push(safeNext())
   }
 
-  async function handleForgotPassword(e: React.FormEvent) {
+  async function handleForgot(e: React.FormEvent) {
     e.preventDefault()
-    if (!email.trim()) {
-      toast.error('Please enter your email address')
-      return
-    }
+    if (!email.trim()) return toast.error('Enter your email address')
     const supabase = getSupabaseBrowserClient()
-    if (!supabase) {
-      toast.info(NOT_CONFIGURED)
-      return
-    }
+    if (!supabase) return toast.info(NOT_CONFIGURED)
     setLoading(true)
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     })
     setLoading(false)
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    setResetSent(true)
-    toast.success('Password reset link sent to your email!')
+    if (error) return toast.error(error.message)
+    setMode('sent')
+  }
+
+  if (mode === 'sent') {
+    return (
+      <>
+        <TopBar onBack={() => setMode('login')} />
+        <div className="flex flex-1 flex-col justify-center">
+          <EmptyState
+            icon={<MailCheck size={24} strokeWidth={1.75} />}
+            title="Check your email"
+            body={`We sent a link to ${email.trim()}. Open it to set a new password.`}
+            action={
+              <Button variant="secondary" onClick={() => setMode('login')}>
+                Back to log in
+              </Button>
+            }
+          />
+        </div>
+      </>
+    )
+  }
+
+  if (mode === 'forgot') {
+    return (
+      <>
+        <TopBar onBack={() => setMode('login')} />
+        <form onSubmit={handleForgot} className="flex flex-col gap-4 pt-2">
+          <div className="mb-2 flex flex-col gap-1.5">
+            <h1 className="text-[26px] leading-8 font-semibold tracking-[-0.02em]">Reset password</h1>
+            <p className="text-[15px] text-fg-3">We’ll email you a link to set a new one.</p>
+          </div>
+          <TextField label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
+            Send reset link
+          </Button>
+        </form>
+      </>
+    )
   }
 
   return (
     <>
-      <div className="flex items-center">
-        <Link
-          href="/"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface-light-muted)] dark:bg-[var(--color-surface-dark-muted)]"
-        >
-          <ArrowLeft size={18} />
-        </Link>
-      </div>
-
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="mb-7">
-          <MantisLogo size={44} withText href="/" />
-          <h1 className="text-[26px] font-extrabold font-[var(--font-display)] mt-4">
-            {forgotMode ? 'Reset password' : 'Welcome back'}
-          </h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            {forgotMode
-              ? "Enter your registered email and we'll send you a reset link."
-              : 'Log in to continue your streak.'}
-          </p>
+      <TopBar onBack={() => router.push('/')} />
+      <form onSubmit={handleLogin} className="flex flex-col gap-4 pt-2">
+        <h1 className="mb-2 text-[26px] leading-8 font-semibold tracking-[-0.02em]">Welcome back</h1>
+        <TextField
+          label="Email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <PasswordField
+          label="Password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <button type="button" onClick={() => setMode('forgot')} className="self-start text-sm font-medium text-link">
+          Forgot password?
+        </button>
+        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
+          Log in
+        </Button>
+        <div className="flex items-center gap-3 text-[13px] text-fg-4">
+          <span className="h-px flex-1 bg-line" />
+          or
+          <span className="h-px flex-1 bg-line" />
         </div>
-
-        {forgotMode ? (
-          <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
-            {resetSent ? (
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs leading-relaxed">
-                <p className="font-bold text-sm mb-1">Check your email</p>
-                We sent a password reset link to <strong className="font-extrabold">{email}</strong>. Open the link to create a new password.
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                <Label>Email Address</Label>
-                <Input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@college.edu"
-                  autoComplete="email"
-                />
-              </div>
-            )}
-
-            {!resetSent ? (
-              <Button type="submit" size="lg" className="w-full mt-2" disabled={loading}>
-                {loading ? 'Sending link…' : 'Send Reset Link'}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                className="w-full mt-2"
-                onClick={() => {
-                  setResetSent(false)
-                  setForgotMode(false)
-                }}
-              >
-                Back to Log In
-              </Button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                setForgotMode(false)
-                setResetSent(false)
-              }}
-              className="text-xs font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors text-center mt-2"
-            >
-              ← Back to Log In
-            </button>
-          </form>
-        ) : (
-          <>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@college.edu"
-                  autoComplete="email"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <Label>Password</Label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForgotMode(true)
-                      setResetSent(false)
-                    }}
-                    className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-                <Input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                />
-              </div>
-              <Button type="submit" size="lg" className="w-full mt-2" disabled={loading}>
-                {loading ? 'Logging in…' : 'Log In'}
-              </Button>
-            </form>
-
-            <div className="flex items-center gap-3 my-6">
-              <div className="h-px flex-1 bg-[var(--color-surface-light-border)] dark:bg-[var(--color-surface-dark-border)]" />
-              <span className="text-xs text-neutral-400">or</span>
-              <div className="h-px flex-1 bg-[var(--color-surface-light-border)] dark:bg-[var(--color-surface-dark-border)]" />
-            </div>
-
-            <Button variant="secondary" size="lg" className="w-full" onClick={signInWithGoogle} type="button">
-              <GoogleIcon /> Continue with Google
-            </Button>
-          </>
-        )}
-      </div>
-
-      {!forgotMode && (
-        <div className="flex flex-col items-center gap-2 text-center text-sm text-neutral-500 mt-4">
-          <p>
-            New to Mantis?{' '}
-            <Link href="/signup" className="font-semibold text-brand-600 dark:text-brand-400">
-              Create account
-            </Link>
-          </p>
-          <Link href="/" className="text-xs font-bold text-neutral-500 hover:text-brand-600 transition-colors">
-            ⚡ Or take the 60-Second Diagnostic Duel
+        <Button type="button" variant="secondary" size="lg" fullWidth onClick={signInWithGoogle}>
+          <GoogleIcon /> Continue with Google
+        </Button>
+        <p className="mt-2 text-center text-sm text-fg-3">
+          New to Mantis?{' '}
+          <Link href="/signup" className="font-semibold">
+            Sign up
           </Link>
-        </div>
-      )}
+        </p>
+      </form>
     </>
   )
 }

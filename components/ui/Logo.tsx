@@ -1,59 +1,39 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 interface LogoProps {
+  /** Height of the pixel mark in px. */
   size?: number
   withText?: boolean
+  /** @deprecated The design has no tagline under the wordmark. */
   showSubtext?: boolean
   className?: string
   href?: string
 }
 
-export function MantisLogo({
-  size = 36,
-  withText = true,
-  showSubtext = false,
-  className,
-  href,
-}: LogoProps) {
+/**
+ * The pixel mantis mark + wordmark. The mark is the only pixel-art element in
+ * the product: never recolour, outline or add effects to it.
+ */
+export function MantisLogo({ size = 24, withText = true, className, href }: LogoProps) {
   const content = (
-    <div className={cn('flex items-center gap-2.5 select-none group', className)}>
-      <div
-        className="relative shrink-0 flex items-center justify-center rounded-2xl overflow-hidden bg-[#12161f] border border-emerald-500/30 shadow-md shadow-brand-500/20 group-hover:border-emerald-400 group-hover:scale-105 transition-all"
-        style={{ width: size, height: size }}
-      >
-        <Image
-          src="/logo.png"
-          alt="Mantis"
-          width={size}
-          height={size}
-          className="object-cover w-full h-full"
-          style={{ imageRendering: 'pixelated' }}
-          priority
-        />
-      </div>
-
+    <span className={cn('inline-flex select-none items-center gap-2.5', className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- crisp SVG pixels */}
+      <img src="/brand/mantis-mark.svg" alt={withText ? '' : 'Mantis'} width={size} height={size} style={{ imageRendering: 'pixelated' }} />
       {withText && (
-        <div className="flex flex-col">
-          <span className="text-xl sm:text-2xl font-black font-[var(--font-display)] tracking-tight leading-none">
-            Mantis<span className="text-brand-500">.</span>
-          </span>
-          {showSubtext && (
-            <span className="text-[10px] uppercase font-bold tracking-widest text-neutral-400 mt-0.5">
-              NEET-PG & INI-CET
-            </span>
-          )}
-        </div>
+        <span className="font-semibold tracking-[-0.02em] text-fg" style={{ fontSize: Math.max(17, Math.round(size * 0.72)) }}>
+          Mantis
+        </span>
       )}
-    </div>
+    </span>
   )
-
-  if (href) {
-    return <Link href={href}>{content}</Link>
-  }
-
-  return content
+  return href ? (
+    <Link href={href} className="hover:no-underline">
+      {content}
+    </Link>
+  ) : (
+    content
+  )
 }
 
 export default MantisLogo

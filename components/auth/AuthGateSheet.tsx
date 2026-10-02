@@ -1,53 +1,47 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Swords, Brain, Layers } from 'lucide-react'
-import { Sheet } from '@/components/ui/Sheet'
+import { UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Sheet } from '@/components/ui/Sheet'
 import { useUIStore } from '@/stores/ui'
-import { hasSeenOnboarding } from '@/features/auth/onboarding'
 
-/** Global login gate. Guests hitting a protected action see this sheet. */
+/** Global sign-in prompt for account-only actions. */
 export function AuthGateSheet() {
   const open = useUIStore((s) => s.authGateOpen)
   const reason = useUIStore((s) => s.authGateReason)
   const close = useUIStore((s) => s.closeAuthGate)
   const router = useRouter()
 
-  function navigate(path: string) {
+  function go(path: string) {
     close()
     router.push(path)
   }
 
-  function handleContinue() {
-    navigate('/signup')
-  }
-
   return (
-    <Sheet open={open} onClose={close} showClose className="sm:max-w-md">
-      <div className="flex flex-col items-center gap-4 text-center pb-1">
-        <div className="flex items-center gap-2">
-          {[Swords, Brain, Layers].map((Icon, i) => (
-            <div
-              key={i}
-              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400"
-            >
-              <Icon size={22} />
-            </div>
-          ))}
+    <Sheet
+      open={open}
+      onClose={close}
+      showClose={false}
+      footer={
+        <>
+          <Button size="lg" fullWidth onClick={() => go('/signup')}>
+            Create account
+          </Button>
+          <Button variant="ghost" fullWidth onClick={() => go('/login')}>
+            I have an account
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-2 pt-1">
+        <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-sunken text-fg">
+          <UserPlus size={22} strokeWidth={1.75} />
         </div>
-        <div>
-          <h2 className="text-xl font-extrabold font-[var(--font-display)]">Create your free account</h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1.5 max-w-[300px]">
-            Sign in to {reason ?? 'continue'} — track progress, climb the ranks, and save your flashcards.
-          </p>
-        </div>
-        <Button size="lg" className="w-full mt-1" onClick={handleContinue}>
-          Continue
-        </Button>
-        <button onClick={() => navigate('/login')} className="text-sm font-semibold text-brand-600 dark:text-brand-400">
-          I already have an account
-        </button>
+        <p className="text-[19px] leading-[26px] font-semibold text-fg">Create a free account</p>
+        <p className="text-[15px] text-fg-2">
+          {reason ? `You need an account to ${reason}.` : 'You need an account for this.'} Your progress stays with you.
+        </p>
       </div>
     </Sheet>
   )

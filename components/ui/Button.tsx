@@ -1,47 +1,67 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { motion, type HTMLMotionProps } from 'framer-motion'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'gold'
+type Variant = 'primary' | 'secondary' | 'soft' | 'ghost' | 'inverse' | 'danger' | 'gold'
 type Size = 'sm' | 'md' | 'lg'
 
 interface ButtonProps extends HTMLMotionProps<'button'> {
   variant?: Variant
   size?: Size
+  fullWidth?: boolean
+  loading?: boolean
 }
 
 const variants: Record<Variant, string> = {
-  primary:
-    'bg-gradient-to-b from-brand-400 to-brand-600 text-white shadow-[var(--shadow-glow-brand)] border border-brand-400/40',
-  secondary:
-    'bg-[var(--color-surface-light-muted)] dark:bg-[var(--color-surface-dark-muted)] text-neutral-900 dark:text-neutral-50 border border-[var(--color-surface-light-border)] dark:border-[var(--color-surface-dark-border)]',
-  ghost: 'bg-transparent text-neutral-700 dark:text-neutral-200',
-  danger: 'bg-gradient-to-b from-danger-400 to-danger-600 text-white shadow-lg shadow-danger-500/20',
-  gold: 'bg-gradient-to-b from-gold-400 to-gold-600 text-neutral-900 shadow-lg shadow-gold-500/25',
+  primary: 'bg-action text-on-action hover:bg-action-hover active:bg-action-pressed border border-transparent',
+  secondary: 'bg-surface text-fg hover:bg-hover active:bg-pressed border border-line-2',
+  soft: 'bg-action-soft text-on-action-soft hover:bg-action-soft-hover border border-transparent',
+  ghost: 'bg-transparent text-fg-2 hover:bg-hover active:bg-pressed border border-transparent',
+  inverse: 'bg-inverse text-on-inverse hover:opacity-90 border border-transparent',
+  // Destructive actions stay calm: clay text on a neutral button.
+  danger: 'bg-surface text-on-incorrect hover:bg-incorrect border border-incorrect-line',
+  // Legacy name — the design has no gold buttons.
+  gold: 'bg-action-soft text-on-action-soft hover:bg-action-soft-hover border border-transparent',
 }
 
 const sizes: Record<Size, string> = {
-  sm: 'h-9 px-4 text-sm rounded-2xl',
-  md: 'h-12 px-6 text-[15px] rounded-2xl',
-  lg: 'h-14 px-8 text-base rounded-[20px]',
+  sm: 'h-9 px-3.5 text-sm gap-1.5 rounded-[10px]',
+  md: 'h-11 px-[18px] text-[15px] gap-2 rounded-xl',
+  lg: 'h-[52px] px-[22px] text-base gap-2 rounded-[14px]',
 }
 
-export function Button({ className, variant = 'primary', size = 'md', children, ...props }: ButtonProps) {
+/** Buttons are verbs of 1–3 words in sentence case ("Start practice", "Copy link"). */
+export function Button({
+  className,
+  variant = 'primary',
+  size = 'md',
+  fullWidth,
+  loading,
+  disabled,
+  children,
+  ...props
+}: ButtonProps) {
   return (
     <motion.button
-      whileTap={{ scale: 0.96 }}
-      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      whileTap={disabled || loading ? undefined : { scale: 0.98 }}
+      transition={{ duration: 0.12, ease: [0.2, 0.8, 0.2, 1] }}
+      disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-semibold tracking-tight select-none',
-        'transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none',
+        'inline-flex items-center justify-center font-semibold tracking-[-0.005em] leading-none whitespace-nowrap select-none',
+        'transition-[background-color,color,opacity] duration-[120ms] cursor-pointer',
+        'disabled:bg-sunken disabled:text-fg-4 disabled:border-transparent disabled:cursor-default',
         variants[variant],
         sizes[size],
+        fullWidth && 'w-full',
         className,
       )}
       {...props}
     >
-      {children}
+      {loading ? <Loader2 size={size === 'lg' ? 20 : size === 'sm' ? 16 : 18} className="animate-spin" /> : null}
+      {children as ReactNode}
     </motion.button>
   )
 }

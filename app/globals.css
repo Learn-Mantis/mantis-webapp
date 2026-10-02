@@ -1,83 +1,392 @@
 @import "tailwindcss";
 
+/*
+ * Mantis design system (Claude Design handoff: design/handoff/mantis-design-system).
+ * Light is the default; dark applies with the `dark` class on <html>.
+ * Raw tokens live on :root / .dark; Tailwind utilities map onto them via
+ * `@theme inline` so every class switches with the theme automatically.
+ */
+
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  /* Fonts wired to next/font CSS variables (see app/layout.tsx) */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+:root {
+  /* Brand — sampled from the pixel mark */
+  --ink: #1a1c24;
+  --antenna: #ffd85c;
 
-  /* Brand green scale */
-  --color-brand-50: #eafff1;
-  --color-brand-100: #cffde0;
-  --color-brand-200: #a3f7c4;
-  --color-brand-300: #6bea9d;
-  --color-brand-400: #3ddc7c;
-  --color-brand-500: #22c55e;
-  --color-brand-600: #17a34c;
-  --color-brand-700: #14803f;
-  --color-brand-800: #146536;
-  --color-brand-900: #12532e;
+  --green-25: #f5f9ef;
+  --green-50: #edf5e3;
+  --green-100: #dcedc8;
+  --green-200: #bedd98;
+  --green-300: #acd53e;
+  --green-400: #80c538;
+  --green-500: #5eb03a;
+  --green-600: #3f9438;
+  --green-700: #267333;
+  --green-800: #1e5c29;
+  --green-900: #16441f;
 
-  /* Accents */
-  --color-info-50: #eef4ff;
-  --color-info-400: #5b9dff;
-  --color-info-500: #3b7dfb;
-  --color-info-600: #2563eb;
+  --stone-0: #ffffff;
+  --stone-25: #fbfaf7;
+  --stone-50: #f7f6f2;
+  --stone-100: #f0eee9;
+  --stone-150: #e9e7e1;
+  --stone-200: #e2dfd8;
+  --stone-300: #d1cec6;
+  --stone-400: #a9a7a0;
+  --stone-500: #7e7d78;
+  --stone-600: #5f5f5c;
+  --stone-700: #45464a;
+  --stone-800: #2c2e35;
+  --stone-900: #1a1c24;
 
-  --color-gold-50: #fff9e8;
-  --color-gold-400: #ffd23d;
-  --color-gold-500: #f5b301;
-  --color-gold-600: #d99400;
+  --char-950: #14161c;
+  --char-900: #1a1c24;
+  --char-850: #20222b;
+  --char-800: #262933;
+  --char-750: #2d303b;
+  --char-700: #363944;
+  --char-600: #474a56;
+  --char-500: #636673;
+  --char-400: #8a8d98;
+  --char-300: #b3b5bd;
+  --char-200: #d7d8dd;
+  --char-100: #ecedef;
 
-  --color-danger-50: #fff1f1;
-  --color-danger-400: #ff6b6b;
-  --color-danger-500: #ef4444;
-  --color-danger-600: #dc2626;
+  --clay-50: #fbf0eb;
+  --clay-100: #f5ddd3;
+  --clay-300: #e0a893;
+  --clay-500: #c2674c;
+  --clay-600: #a8513a;
+  --clay-700: #8a3f2c;
+  --honey-50: #fff8e1;
+  --honey-100: #ffefb8;
+  --honey-300: #ffd85c;
+  --honey-700: #8a6400;
+  --slate-50: #eef2f5;
+  --slate-500: #4d6b82;
+  --slate-700: #34505f;
 
-  /* Light surfaces */
-  --color-surface-light: #fbfbf9;
-  --color-surface-light-card: #ffffff;
-  --color-surface-light-muted: #f2f3f1;
-  --color-surface-light-border: #ebece8;
+  /* Semantic — light */
+  --bg-app: var(--stone-50);
+  --bg-sunken: var(--stone-100);
+  --surface-1: var(--stone-0);
+  --surface-2: var(--stone-25);
+  --surface-hover: var(--stone-100);
+  --surface-pressed: var(--stone-150);
+  --surface-inverse: var(--ink);
+  --overlay-scrim: rgba(26, 28, 36, 0.32);
 
-  /* Dark surfaces (charcoal, not pure black) */
-  --color-surface-dark: #14161a;
-  --color-surface-dark-card: #1c1f24;
-  --color-surface-dark-muted: #23262c;
-  --color-surface-dark-border: #2c3038;
+  --border-subtle: var(--stone-150);
+  --border-default: var(--stone-200);
+  --border-strong: var(--stone-300);
+  --border-focus: var(--green-600);
 
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-3xl: 28px;
+  --text-1: var(--ink);
+  --text-2: #4a4c53;
+  --text-3: #6e6f72;
+  --text-4: var(--stone-400);
+  --text-inverse: #ffffff;
+  --text-link: var(--green-700);
 
-  --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -8px rgba(16, 24, 40, 0.10);
-  --shadow-soft-dark: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 28px -6px rgba(0, 0, 0, 0.45);
-  --shadow-glow-brand: 0 8px 30px -6px rgba(34, 197, 94, 0.45), 0 0 0 1px rgba(34, 197, 94, 0.08);
+  --action-bg: var(--green-700);
+  --action-bg-hover: var(--green-800);
+  --action-bg-pressed: var(--green-900);
+  --action-fg: #ffffff;
+  --action-soft-bg: var(--green-50);
+  --action-soft-fg: var(--green-800);
+  --action-soft-bg-hover: var(--green-100);
+  --skeleton-base: var(--stone-100);
+  --skeleton-shine: var(--stone-50);
 
-  --animate-shimmer: shimmer 2s linear infinite;
-  --animate-float: float 3.4s ease-in-out infinite;
-  --animate-pulse-ring: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --accent: var(--green-500);
+  --accent-strong: var(--green-600);
+  --accent-track: var(--stone-150);
+  --highlight: var(--antenna);
+  --highlight-soft: var(--honey-50);
+  --highlight-fg: var(--honey-700);
 
-  @keyframes shimmer {
-    0% { background-position: -400px 0; }
-    100% { background-position: 400px 0; }
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-  }
-  @keyframes pulse-ring {
-    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45); }
-    70% { box-shadow: 0 0 0 14px rgba(34, 197, 94, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-  }
+  --correct-bg: var(--green-50);
+  --correct-border: #9fcb6f;
+  --correct-fg: var(--green-700);
+  --correct-solid: var(--green-600);
+  --incorrect-bg: var(--clay-50);
+  --incorrect-border: var(--clay-300);
+  --incorrect-fg: var(--clay-600);
+  --incorrect-solid: var(--clay-500);
+  --rating-up: var(--green-700);
+  --rating-down: var(--clay-600);
+  --info-bg: var(--slate-50);
+  --info-fg: var(--slate-700);
+  --selected-bg: #f2f5ee;
+  --selected-border: var(--ink);
+
+  --shadow-1: 0 1px 2px rgba(26, 28, 36, 0.05);
+  --shadow-2: 0 1px 2px rgba(26, 28, 36, 0.04), 0 4px 14px rgba(26, 28, 36, 0.05);
+  --shadow-3: 0 2px 6px rgba(26, 28, 36, 0.06), 0 12px 36px rgba(26, 28, 36, 0.12);
+  --ring-focus: 0 0 0 3px rgba(63, 148, 56, 0.22);
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.25, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  --page-gutter: 20px;
+  --content-max: 720px;
+  --sidebar-w: 248px;
+  --bottom-nav-h: 64px;
+
+  color-scheme: light;
+
+  /* Legacy names still used by older screens — mapped onto the new tokens. */
+  --color-bg-light: var(--bg-app);
+  --color-bg-dark: var(--bg-app);
+}
+
+.dark {
+  --bg-app: var(--char-900);
+  --bg-sunken: var(--char-950);
+  --surface-1: var(--char-850);
+  --surface-2: var(--char-800);
+  --surface-hover: var(--char-800);
+  --surface-pressed: var(--char-750);
+  --surface-inverse: var(--char-100);
+  --overlay-scrim: rgba(8, 9, 12, 0.6);
+
+  --border-subtle: var(--char-800);
+  --border-default: var(--char-750);
+  --border-strong: var(--char-600);
+  --border-focus: var(--green-400);
+
+  --text-1: var(--char-100);
+  --text-2: var(--char-300);
+  --text-3: var(--char-400);
+  --text-4: var(--char-500);
+  --text-inverse: var(--ink);
+  --text-link: var(--green-300);
+
+  --action-bg: var(--green-400);
+  --action-bg-hover: #8fcf4a;
+  --action-bg-pressed: var(--green-500);
+  --action-fg: var(--ink);
+  --action-soft-bg: rgba(128, 197, 56, 0.12);
+  --action-soft-fg: #a9d872;
+  --action-soft-bg-hover: rgba(128, 197, 56, 0.18);
+  --skeleton-base: var(--char-800);
+  --skeleton-shine: var(--char-750);
+
+  --accent: var(--green-400);
+  --accent-strong: var(--green-300);
+  --accent-track: var(--char-750);
+  --highlight-soft: rgba(255, 216, 92, 0.1);
+  --highlight-fg: #f2cf62;
+
+  --correct-bg: rgba(128, 197, 56, 0.1);
+  --correct-border: rgba(128, 197, 56, 0.45);
+  --correct-fg: #a9d872;
+  --correct-solid: var(--green-400);
+  --incorrect-bg: rgba(224, 168, 147, 0.09);
+  --incorrect-border: rgba(224, 168, 147, 0.42);
+  --incorrect-fg: #e8a994;
+  --incorrect-solid: #d9876e;
+  --rating-up: #a9d872;
+  --rating-down: #e8a994;
+  --info-bg: rgba(124, 156, 180, 0.12);
+  --info-fg: #a9c1d3;
+  --selected-bg: var(--char-800);
+  --selected-border: var(--char-200);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.22);
+  --shadow-3: 0 2px 8px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.4);
+  --ring-focus: 0 0 0 3px rgba(128, 197, 56, 0.25);
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: var(--font-geist), "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Semantic colour utilities: bg-surface, text-fg-3, border-line, bg-action … */
+  --color-app: var(--bg-app);
+  --color-sunken: var(--bg-sunken);
+  --color-surface: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-hover: var(--surface-hover);
+  --color-pressed: var(--surface-pressed);
+  --color-inverse: var(--surface-inverse);
+  --color-on-inverse: var(--text-inverse);
+  --color-scrim: var(--overlay-scrim);
+
+  --color-line: var(--border-subtle);
+  --color-line-2: var(--border-default);
+  --color-line-3: var(--border-strong);
+  --color-focus: var(--border-focus);
+
+  --color-fg: var(--text-1);
+  --color-fg-2: var(--text-2);
+  --color-fg-3: var(--text-3);
+  --color-fg-4: var(--text-4);
+  --color-link: var(--text-link);
+
+  --color-action: var(--action-bg);
+  --color-action-hover: var(--action-bg-hover);
+  --color-action-pressed: var(--action-bg-pressed);
+  --color-on-action: var(--action-fg);
+  --color-action-soft: var(--action-soft-bg);
+  --color-action-soft-hover: var(--action-soft-bg-hover);
+  --color-on-action-soft: var(--action-soft-fg);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-track: var(--accent-track);
+  --color-highlight: var(--highlight);
+  --color-highlight-soft: var(--highlight-soft);
+  --color-on-highlight: var(--highlight-fg);
+
+  --color-correct: var(--correct-bg);
+  --color-correct-line: var(--correct-border);
+  --color-on-correct: var(--correct-fg);
+  --color-correct-solid: var(--correct-solid);
+  --color-incorrect: var(--incorrect-bg);
+  --color-incorrect-line: var(--incorrect-border);
+  --color-on-incorrect: var(--incorrect-fg);
+  --color-incorrect-solid: var(--incorrect-solid);
+  --color-rating-up: var(--rating-up);
+  --color-rating-down: var(--rating-down);
+  --color-info: var(--info-bg);
+  --color-on-info: var(--info-fg);
+  --color-selected: var(--selected-bg);
+  --color-selected-line: var(--selected-border);
+
+  /* Named e1–e3 so they don't collide with the raw --shadow-* tokens above. */
+  --shadow-e1: var(--shadow-1);
+  --shadow-e2: var(--shadow-2);
+  --shadow-e3: var(--shadow-3);
+  --shadow-focus: var(--ring-focus);
+
+  --radius-option: 14px;
+  --radius-sheet: 22px;
+
+  --ease-mantis: var(--ease-out);
+
+  /*
+   * Legacy palettes used by screens not yet rebuilt. Remapped to the calm
+   * brand hues so nothing renders neon while the redesign rolls out.
+   */
+  --color-brand-50: var(--green-50);
+  --color-brand-100: var(--green-100);
+  --color-brand-200: var(--green-200);
+  --color-brand-300: var(--green-300);
+  --color-brand-400: var(--green-400);
+  --color-brand-500: var(--green-600);
+  --color-brand-600: var(--green-700);
+  --color-brand-700: var(--green-700);
+  --color-brand-800: var(--green-800);
+  --color-brand-900: var(--green-900);
+  --color-brand-950: var(--green-900);
+
+  --color-emerald-50: var(--green-50);
+  --color-emerald-100: var(--green-100);
+  --color-emerald-300: var(--green-300);
+  --color-emerald-400: var(--green-400);
+  --color-emerald-500: var(--green-600);
+  --color-emerald-600: var(--green-700);
+  --color-emerald-700: var(--green-700);
+  --color-emerald-900: var(--green-900);
+  --color-emerald-950: var(--green-900);
+
+  --color-danger-50: var(--clay-50);
+  --color-danger-400: var(--clay-300);
+  --color-danger-500: var(--clay-500);
+  --color-danger-600: var(--clay-600);
+  --color-rose-50: var(--clay-50);
+  --color-rose-300: var(--clay-300);
+  --color-rose-400: var(--clay-300);
+  --color-rose-500: var(--clay-500);
+  --color-rose-600: var(--clay-600);
+  --color-rose-950: var(--clay-700);
+  --color-red-500: var(--clay-500);
+  --color-red-600: var(--clay-600);
+
+  --color-gold-50: var(--honey-50);
+  --color-gold-300: var(--honey-300);
+  --color-gold-400: var(--honey-300);
+  --color-gold-500: var(--honey-300);
+  --color-gold-600: var(--honey-700);
+  --color-amber-50: var(--honey-50);
+  --color-amber-300: var(--honey-300);
+  --color-amber-400: var(--honey-300);
+  --color-amber-500: var(--honey-300);
+  --color-amber-600: var(--honey-700);
+  --color-amber-700: var(--honey-700);
+  --color-amber-900: var(--honey-700);
+
+  --color-info-50: var(--slate-50);
+  --color-info-400: var(--slate-500);
+  --color-info-500: var(--slate-500);
+  --color-info-600: var(--slate-700);
+  --color-purple-400: var(--slate-500);
+  --color-purple-500: var(--slate-500);
+  --color-purple-600: var(--slate-700);
+  --color-purple-700: var(--slate-700);
+
+  /* Warm neutrals instead of Tailwind's cool greys. */
+  --color-neutral-50: var(--stone-50);
+  --color-neutral-100: var(--stone-100);
+  --color-neutral-200: var(--stone-200);
+  --color-neutral-300: var(--stone-300);
+  --color-neutral-400: var(--stone-400);
+  --color-neutral-500: var(--stone-500);
+  --color-neutral-600: var(--stone-600);
+  --color-neutral-700: var(--stone-700);
+  --color-neutral-800: var(--char-800);
+  --color-neutral-900: var(--char-850);
+  --color-neutral-950: var(--char-950);
+
+  --color-surface-light: var(--bg-app);
+  --color-surface-light-card: var(--surface-1);
+  --color-surface-light-muted: var(--bg-sunken);
+  --color-surface-light-border: var(--border-subtle);
+  --color-surface-dark: var(--bg-app);
+  --color-surface-dark-card: var(--surface-1);
+  --color-surface-dark-muted: var(--bg-sunken);
+  --color-surface-dark-border: var(--border-subtle);
+
+  --shadow-soft: var(--shadow-1);
+  --shadow-soft-dark: var(--shadow-1);
+  --shadow-glow-brand: none;
+
+  --animate-shimmer: mantis-shimmer 1.6s linear infinite;
+  --animate-rise: mantis-rise var(--dur-base) var(--ease-out);
+  --animate-float: none;
+  --animate-pulse-ring: none;
+}
+
+@keyframes mantis-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+@keyframes mantis-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mantis-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mantis-spin {
+  to { transform: rotate(360deg); }
 }
 
 @layer base {
   * {
     -webkit-tap-highlight-color: transparent;
-    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
   }
 
   html {
@@ -88,40 +397,47 @@
 
   body {
     margin: 0;
-    @apply bg-[var(--color-surface-light)] text-neutral-900 transition-colors duration-300;
+    background: var(--bg-app);
+    color: var(--text-1);
+    font-size: 15px;
+    line-height: 23px;
     overscroll-behavior-y: none;
   }
 
-  html.dark body {
-    @apply bg-[var(--color-surface-dark)] text-neutral-50;
+  /* Numbers carry meaning: every score, timer and rating uses mono numerals. */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
   }
 
-  ::-webkit-scrollbar {
-    width: 0px;
-    height: 0px;
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--ring-focus);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
   }
 }
 
 @layer utilities {
-  .glass {
-    background: color-mix(in srgb, var(--color-surface-light-card) 72%, transparent);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-  }
-  html.dark .glass {
-    background: color-mix(in srgb, var(--color-surface-dark-card) 62%, transparent);
-  }
-
-  .shimmer-bg {
-    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
-    background-size: 800px 100%;
-  }
-
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  /* Old frosted-glass helper: now a plain surface (the design forbids blur). */
+  .glass {
+    background: var(--surface-1);
+  }
+  .shimmer-bg {
+    background: linear-gradient(90deg, var(--skeleton-base) 0, var(--skeleton-shine) 120px, var(--skeleton-base) 240px);
+    background-size: 600px 100%;
   }
 }

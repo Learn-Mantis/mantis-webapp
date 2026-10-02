@@ -2,118 +2,73 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { CircleCheck } from 'lucide-react'
 import { toast } from 'sonner'
-import { ArrowLeft, Lock, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Input, Label } from '@/components/ui/Field'
-import { MantisLogo } from '@/components/ui/Logo'
+import { EmptyState } from '@/components/ui/Feedback'
+import { PasswordField } from '@/components/ui/Field'
+import { TopBar } from '@/components/layout/TopBar'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { NOT_CONFIGURED } from '@/features/auth/actions'
 
+/** Reached from the reset email (via /auth/callback, which signs the person in). */
 export default function ResetPasswordPage() {
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [updated, setUpdated] = useState(false)
   const router = useRouter()
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
 
-  async function handleUpdatePassword(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault()
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters')
-      return
-    }
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match')
-      return
-    }
-
+    if (password.length < 8) return toast.error('Password needs at least 8 characters')
+    if (password !== confirm) return toast.error('Passwords don’t match')
     const supabase = getSupabaseBrowserClient()
-    if (!supabase) {
-      toast.info(NOT_CONFIGURED)
-      return
-    }
-
+    if (!supabase) return toast.info(NOT_CONFIGURED)
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password })
     setLoading(false)
+    if (error) return toast.error(error.message)
+    setDone(true)
+  }
 
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-
-    setUpdated(true)
-    toast.success('Password updated successfully!')
+  if (done) {
+    return (
+      <div className="flex flex-1 flex-col justify-center">
+        <EmptyState
+          icon={<CircleCheck size={24} strokeWidth={1.75} />}
+          title="Password updated"
+          body="Use your new password next time you log in."
+          action={<Button onClick={() => router.push('/')}>Continue</Button>}
+        />
+      </div>
+    )
   }
 
   return (
     <>
-      <div className="flex items-center">
-        <Link
-          href="/login"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface-light-muted)] dark:bg-[var(--color-surface-dark-muted)]"
-        >
-          <ArrowLeft size={18} />
-        </Link>
-      </div>
-
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="mb-7">
-          <MantisLogo size={44} withText href="/" />
-          <h1 className="text-[26px] font-extrabold font-[var(--font-display)] mt-4">
-            {updated ? 'Password updated' : 'Create new password'}
-          </h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            {updated
-              ? 'Your password has been changed. You can now use your new password.'
-              : 'Choose a strong password with at least 6 characters.'}
-          </p>
-        </div>
-
-        {updated ? (
-          <div className="flex flex-col gap-4">
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-3">
-              <CheckCircle2 size={20} className="shrink-0 text-emerald-500" />
-              <span>Your account password is now secure and updated.</span>
-            </div>
-            <Button size="lg" className="w-full mt-2 font-bold" onClick={() => router.push('/')}>
-              Continue to Dashboard
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label>New Password</Label>
-              <Input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                autoComplete="new-password"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label>Confirm New Password</Label>
-              <Input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm password"
-                autoComplete="new-password"
-              />
-            </div>
-
-            <Button type="submit" size="lg" className="w-full mt-2 font-bold" disabled={loading}>
-              {loading ? 'Updating password…' : 'Set New Password'}
-            </Button>
-          </form>
-        )}
-      </div>
+      <TopBar onBack={() => router.push('/login')} />
+      <form onSubmit={save} className="flex flex-col gap-4 pt-2">
+        <h1 className="mb-2 text-[26px] leading-8 font-semibold tracking-[-0.02em]">Set a new password</h1>
+        <PasswordField
+          label="New password"
+          autoComplete="new-password"
+          hint="At least 8 characters"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <PasswordField
+          label="Confirm password"
+          autoComplete="new-password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          required
+        />
+        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
+          Save password
+        </Button>
+      </form>
     </>
   )
 }

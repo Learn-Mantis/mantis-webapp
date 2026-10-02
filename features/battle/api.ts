@@ -170,6 +170,29 @@ export interface BattleLogItem {
   challengers: number | null
 }
 
+export interface MyStats {
+  answered_total: number
+  correct_total: number
+  answered_today: number
+  day_streak: number
+}
+
+export interface LeaderRow {
+  position: number
+  username: string
+  rating: number
+  rank_key: string
+  /** Rating (all-time) or rating gained in the last 7 days (week). */
+  value: number
+  me: boolean
+}
+
+export interface Leaderboard {
+  period: 'all' | 'week'
+  rows: LeaderRow[]
+  me: LeaderRow | null
+}
+
 export type MatchSearch = { battle_id: string } | { searching: true; waited_sec: number; window: number }
 
 /** Friendly messages for errors raised by the battle functions. */
@@ -243,6 +266,9 @@ export const battleApi = {
   matchCancel: () => call<{ battle_id: string | null }>('mm_cancel'),
 
   myBattles: (limit = 20) => call<BattleLogItem[]>('my_battles', { p_limit: limit }),
+  myStats: () => call<MyStats>('my_stats'),
+  leaderboard: (period: 'all' | 'week', limit = 50) =>
+    call<Leaderboard>('leaderboard', { p_period: period, p_limit: limit }),
 
   bots: async (): Promise<Bot[]> => {
     const { data, error } = await client().from('bots' as never).select('*').order('sort')

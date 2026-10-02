@@ -1,9 +1,14 @@
 'use client'
 
-import { X, Bot as BotIcon, Check } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
+import { useState } from 'react'
+import { Bot as BotIcon, Check, Flag } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
+import { Button } from '@/components/ui/Button'
+import { Dialog, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/Dialog'
+import { EmptyState, Timer } from '@/components/ui/Feedback'
+import { ProgressBar } from '@/components/ui/ProgressBar'
+import { MCQOption, type OptionState } from '@/components/ui/Quiz'
+import { TopBar } from '@/components/layout/TopBar'
 import { BattleRunResults } from '@/components/battle/BattleRunResults'
 import { useBattleRun } from '@/features/battle/use-battle-run'
 import type { BattleState, Option } from '@/features/battle/api'
@@ -13,19 +18,54 @@ import { cn } from '@/lib/utils'
 
 const OPTIONS: Option[] = ['A', 'B', 'C', 'D']
 
-function mmss(ms: number): string {
-  const total = Math.ceil(ms / 1000)
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
-}
-
-function initials(name: string): string {
-  return name.replace(/^Guest-/, '').slice(0, 2).toUpperCase()
-}
-
 export function battleTag(state: Pick<BattleState, 'kind' | 'rated'>): string {
   if (state.kind === 'bot') return 'Practice'
   if (state.kind === 'challenge') return state.rated ? 'Ranked challenge' : 'Friendly challenge'
   return state.rated ? 'Ranked' : 'Friendly'
+}
+
+export function BotAvatar({ size = 36 }: { size?: number }) {
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center rounded-full bg-sunken text-fg-2"
+      style={{ width: size, height: size }}
+    >
+      <BotIcon size={Math.round(size * 0.5)} strokeWidth={1.75} />
+    </div>
+  )
+}
+
+function PlayerScore({
+  name,
+  avatarName,
+  score,
+  bot,
+  done,
+  note,
+  align = 'left',
+}: {
+  name: string
+  /** Name the avatar initials come from (defaults to `name`). */
+  avatarName?: string
+  score: number | null
+  bot?: boolean
+  done?: boolean
+  note?: string
+  align?: 'left' | 'right'
+}) {
+  return (
+    <div className={cn('flex min-w-0 flex-1 items-center gap-2.5', align === 'right' && 'flex-row-reverse text-right')}>
+      {bot ? <BotAvatar /> : <Avatar name={avatarName ?? name} size={36} />}
+      <div className="min-w-0">
+        <p className={cn('flex items-center gap-1 text-[13px] text-fg-2', align === 'right' && 'justify-end')}>
+          <span className="truncate">{name}</span>
+          {done && <Check size={13} strokeWidth={2.5} className="shrink-0 text-on-correct" />}
+        </p>
+        <p className="num text-[21px] leading-[26px] text-fg">{score ?? '–'}</p>
+        {note && <p className="text-[11px] text-fg-3">{note}</p>}
+      </div>
+    </div>
+  )
 }
 
 interface BattleRunProps {
@@ -37,20 +77,36 @@ interface BattleRunProps {
 export function BattleRun({ battleId, onExit, onPlayAgain }: BattleRunProps) {
   const run = useBattleRun(battleId)
   const { phase, state, question, selected, verdict } = run
+  const [leaving, setLeaving] = useState(false)
+  // Per-question results seen this session (for the progress segments).
+  const [mine, setMine] = useState<Record<number, boolean>>({})
+  const [theirs, setTheirs] = useState<Record<number, boolean>>({})
+  const [recorded, setRecorded] = useState<number | null>(null)
+
+  // Record each verdict once, when it arrives (state derived during render).
+  if (verdict && question && recorded !== question.index) {
+    setRecorded(question.index)
+    setMine((m) => ({ ...m, [question.index]: verdict.correct }))
+    if (verdict.bot) setTheirs((t) => ({ ...t, [question.index]: Boolean(verdict.bot?.correct) }))
+  }
 
   if (phase === 'error') {
     return (
-      <Card className="p-6 flex flex-col items-center gap-4 text-center max-w-md mx-auto mt-10">
-        <p className="font-semibold">{run.error ?? 'This battle could not be loaded.'}</p>
-        <Button variant="secondary" onClick={onExit}>
-          Back to Battle
-        </Button>
-      </Card>
+      <EmptyState
+        icon={<Flag size={24} strokeWidth={1.75} />}
+        title="This battle can’t be opened"
+        body={run.error ?? undefined}
+        action={
+          <Button variant="secondary" onClick={onExit}>
+            Back to battle
+          </Button>
+        }
+      />
     )
   }
 
   if (phase === 'loading' || !state) {
-    return <p className="text-center text-sm text-neutral-500 mt-16">Loading battle…</p>
+    return <p className="mt-24 text-center text-sm text-fg-3">Loading battle…</p>
   }
 
   if (phase === 'finished') {
@@ -58,173 +114,137 @@ export function BattleRun({ battleId, onExit, onPlayAgain }: BattleRunProps) {
   }
 
   const mode = BATTLE_MODES[state.mode]
-  const me = state.players.find((p) => p.me)
   const opponent = state.kind === 'live' ? state.players.find((p) => !p.me) : null
-  const host = state.kind === 'challenge' && state.me.role === 'challenger' ? state.players.find((p) => p.role === 'host') : null
-  const revealed = phase === 'revealing' && verdict
+  const index = question?.index ?? state.me.index
+  const total = state.total_questions
+  const revealed = phase === 'revealing' && verdict !== null
 
-  function confirmLeave() {
-    const msg =
-      state?.kind === 'bot'
-        ? 'Leave this practice game?'
-        : 'Leave now? Your run ends here and unanswered questions count as not answered.'
-    if (window.confirm(msg)) run.leave()
+  const segments = (results: Record<number, boolean>) =>
+    total
+      ? Array.from({ length: total }, (_, i) =>
+          i in results ? (results[i] ? 'correct' : 'incorrect') : i === index ? 'current' : i < index ? 'skipped' : 'pending',
+        )
+      : undefined
+
+  function optionState(opt: Option): OptionState {
+    if (revealed && verdict) {
+      if (opt === verdict.correctOption) return 'correct'
+      if (opt === verdict.selected) return 'incorrect'
+      return 'dimmed'
+    }
+    return selected === opt ? 'selected' : 'idle'
   }
 
+  const clock =
+    state.mode === 'blitz' && run.perQuestionLeft !== null ? (
+      <Timer variant="ring" seconds={run.perQuestionLeft / 1000} total={state.per_q_sec ?? 20} warnAt={5} />
+    ) : state.mode === 'rapid' && run.overallLeft !== null ? (
+      <Timer seconds={run.overallLeft / 1000} warnAt={30} />
+    ) : null
+
   return (
-    <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full py-2">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-          {mode.label} · {categoryLabel(state.category_id)} · {battleTag(state)}
-        </p>
-        <button
-          onClick={confirmLeave}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          aria-label="Leave battle"
-        >
-          <X size={16} />
-        </button>
+    <div className="flex flex-col">
+      <TopBar
+        backIcon="x"
+        onBack={() => setLeaving(true)}
+        title={`${categoryLabel(state.category_id)} · ${mode.label}`}
+        subtitle={total ? `${index + 1} of ${total}` : `Question ${index + 1}`}
+        center
+      />
+
+      <div className="flex items-center gap-3 pb-3 pt-1">
+        <PlayerScore
+          name="You"
+          avatarName={state.players.find((p) => p.me)?.username}
+          score={state.me.score}
+          done={revealed}
+        />
+        {clock}
+        {state.kind === 'bot' && state.bot ? (
+          <PlayerScore
+            name={`${state.bot.username} bot`}
+            bot
+            score={state.bot.score}
+            done={revealed || run.botLockedIn}
+            align="right"
+          />
+        ) : opponent ? (
+          <PlayerScore
+            name={opponent.username}
+            score={opponent.score}
+            done={opponent.finished}
+            note={opponent.finished ? 'Finished' : `On ${opponent.answered + 1}`}
+            align="right"
+          />
+        ) : state.kind === 'challenge' && state.me.role === 'challenger' ? (
+          <PlayerScore
+            name={state.players.find((p) => p.role === 'host')?.username ?? 'Challenger'}
+            score={null}
+            note="Score hidden"
+            align="right"
+          />
+        ) : (
+          <div className="flex-1 text-right text-[13px] text-fg-3">{battleTag(state)}</div>
+        )}
       </div>
 
-      {/* Scoreboard */}
-      <Card className="p-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <Avatar initials={initials(me?.username ?? 'You')} size={36} />
-          <div className="min-w-0">
-            <p className="text-xs text-neutral-500 truncate">{me?.username ?? 'You'}</p>
-            <p className="text-xl font-bold tabular-nums">{state.me.score}</p>
-          </div>
+      {total && (
+        <div className="flex flex-col gap-1.5 pb-4">
+          <ProgressBar segments={segments(mine)} />
+          {state.kind === 'bot' && <ProgressBar segments={segments(theirs)} />}
         </div>
-
-        <div className="text-center shrink-0">
-          {state.mode === 'blitz' && run.perQuestionLeft !== null ? (
-            <p className={cn('text-2xl font-bold tabular-nums', run.perQuestionLeft <= 5000 && 'text-danger-500')}>
-              {Math.ceil(run.perQuestionLeft / 1000)}
-            </p>
-          ) : state.mode === 'rapid' && run.overallLeft !== null ? (
-            <p className={cn('text-xl font-bold tabular-nums', run.overallLeft <= 30000 && 'text-danger-500')}>
-              {mmss(run.overallLeft)}
-            </p>
-          ) : (
-            <p className="text-sm font-semibold tabular-nums">
-              {(question?.index ?? state.me.index) + 1}
-              {state.total_questions ? ` / ${state.total_questions}` : ''}
-            </p>
-          )}
-          <p className="text-[11px] text-neutral-500">
-            {state.mode === 'rapid'
-              ? `Question ${(question?.index ?? state.me.index) + 1}`
-              : state.mode === 'blitz'
-                ? `${(question?.index ?? state.me.index) + 1} / ${state.total_questions}`
-                : 'No timer'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 min-w-0 flex-1 justify-end text-right">
-          {state.kind === 'bot' && state.bot ? (
-            <>
-              <div className="min-w-0">
-                <p className="text-xs text-neutral-500 truncate">{state.bot.username} · Bot</p>
-                <div className="flex items-center justify-end gap-1.5">
-                  <span className="text-[11px] text-neutral-400">
-                    {revealed ? (verdict.bot?.correct ? 'Correct' : 'Wrong') : run.botLockedIn ? 'Answered' : 'Thinking'}
-                  </span>
-                  <p className="text-xl font-bold tabular-nums">
-                    {state.bot.score}
-                  </p>
-                </div>
-              </div>
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
-                <BotIcon size={18} />
-              </div>
-            </>
-          ) : opponent ? (
-            <>
-              <div className="min-w-0">
-                <p className="text-xs text-neutral-500 truncate">{opponent.username}</p>
-                <div className="flex items-center justify-end gap-1.5">
-                  <span className="text-[11px] text-neutral-400">
-                    {opponent.finished ? 'Finished' : `Q${opponent.answered + 1}`}
-                  </span>
-                  <p className="text-xl font-bold tabular-nums">{opponent.score}</p>
-                </div>
-              </div>
-              <Avatar initials={initials(opponent.username)} size={36} />
-            </>
-          ) : host ? (
-            <>
-              <div className="min-w-0">
-                <p className="text-xs text-neutral-500 truncate">{host.username}&rsquo;s score</p>
-                <p className="text-xl font-bold tabular-nums">{host.score}</p>
-              </div>
-              <Avatar initials={initials(host.username)} size={36} />
-            </>
-          ) : (
-            <p className="text-xs text-neutral-500">Your challenge</p>
-          )}
-        </div>
-      </Card>
-
-      {/* Question */}
-      {question && (
-        <>
-          <Card className="p-5 flex flex-col gap-3">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-              {subjectName(question.subject)}
-            </p>
-            <p className="text-base sm:text-lg leading-relaxed text-neutral-900 dark:text-neutral-100">
-              {question.question}
-            </p>
-          </Card>
-
-          <div className="flex flex-col gap-2.5">
-            {OPTIONS.map((opt) => {
-              const isSelected = selected === opt
-              const isCorrect = revealed && verdict.correctOption === opt
-              const isWrongPick = revealed && isSelected && !verdict.correct
-              return (
-                <button
-                  key={opt}
-                  disabled={phase !== 'question'}
-                  onClick={() => run.answer(opt)}
-                  className={cn(
-                    'flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-colors',
-                    'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900',
-                    phase === 'question' && 'hover:border-brand-400',
-                    isSelected && !revealed && 'border-brand-500 bg-brand-50 dark:bg-brand-500/10',
-                    isCorrect && 'border-brand-500 bg-brand-500/10',
-                    isWrongPick && 'border-danger-500 bg-danger-500/10',
-                    revealed && !isCorrect && !isWrongPick && 'opacity-50',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold',
-                      'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300',
-                      isCorrect && 'bg-brand-500 text-white',
-                      isWrongPick && 'bg-danger-500 text-white',
-                    )}
-                  >
-                    {isCorrect ? <Check size={14} /> : opt}
-                  </span>
-                  <span className="text-sm sm:text-[15px] leading-snug pt-0.5">{question.options[opt]}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          <p className="text-center text-sm min-h-5 text-neutral-500">
-            {revealed
-              ? verdict.selected === null
-                ? 'Time’s up'
-                : verdict.correct
-                  ? 'Correct'
-                  : `Answer: ${verdict.correctOption}`
-              : run.error ?? ''}
-          </p>
-        </>
       )}
+
+      {question && (
+        <div className="flex flex-col gap-4 pb-8">
+          <p className="text-[13px] text-fg-3">{subjectName(question.subject)}</p>
+          <p className="text-[17px] leading-[27px] text-fg [text-wrap:pretty]">{question.question}</p>
+          <div className="flex flex-col gap-2">
+            {OPTIONS.map((opt) => (
+              <MCQOption
+                // Keyed per question so a new question never inherits the last reveal's fade.
+                key={`${question.index}-${opt}`}
+                letter={opt}
+                state={optionState(opt)}
+                disabled={phase !== 'question'}
+                onClick={() => run.answer(opt)}
+              >
+                {question.options[opt]}
+              </MCQOption>
+            ))}
+          </div>
+          <p className="min-h-[23px] text-sm text-fg-3">
+            {revealed && verdict?.selected === null ? 'Time’s up' : run.error && phase === 'question' ? run.error : ''}
+          </p>
+        </div>
+      )}
+
+      <Dialog open={leaving} onClose={() => setLeaving(false)} showClose={false}>
+        <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-sunken text-fg">
+          <Flag size={22} strokeWidth={1.75} />
+        </div>
+        <DialogTitle>Leave this battle?</DialogTitle>
+        <DialogDescription>
+          {state.kind === 'bot'
+            ? 'Your practice game ends here.'
+            : 'Leaving counts as finished. Questions you haven’t answered score nothing.'}
+        </DialogDescription>
+        <DialogFooter>
+          <Button fullWidth onClick={() => setLeaving(false)}>
+            Keep playing
+          </Button>
+          <Button
+            variant="ghost"
+            fullWidth
+            onClick={() => {
+              setLeaving(false)
+              run.leave()
+            }}
+          >
+            Leave
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   )
 }

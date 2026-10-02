@@ -21,6 +21,8 @@ export interface MatchSettings {
 export function useMatchmaking(onMatched: (battleId: string) => void) {
   const [settings, setSettings] = useState<MatchSettings | null>(null)
   const [waited, setWaited] = useState(0)
+  /** ± rating range currently searched (widens while waiting). */
+  const [range, setRange] = useState(100)
   const [error, setError] = useState<string | null>(null)
   const onMatchedRef = useRef(onMatched)
 
@@ -43,6 +45,7 @@ export function useMatchmaking(onMatched: (battleId: string) => void) {
           return
         }
         setWaited(res.waited_sec)
+        setRange(res.window)
         setError(null)
       } catch (e) {
         if (stopped) return
@@ -60,6 +63,7 @@ export function useMatchmaking(onMatched: (battleId: string) => void) {
 
   const start = useCallback((s: MatchSettings) => {
     setWaited(0)
+    setRange(100)
     setError(null)
     setSettings(s)
   }, [])
@@ -79,6 +83,7 @@ export function useMatchmaking(onMatched: (battleId: string) => void) {
     searching: settings !== null,
     settings,
     waited,
+    range,
     showFallback: settings !== null && waited >= FALLBACK_AFTER_SEC,
     error,
     start,

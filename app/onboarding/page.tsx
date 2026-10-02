@@ -1,8 +1,7 @@
 'use client'
 
-import { QuickBattleOnboarding } from '@/components/onboarding/QuickBattleOnboarding'
+import { Landing } from '@/components/onboarding/Landing'
 
 export default function OnboardingPage() {
-  return <QuickBattleOnboarding />
+  return <Landing />
 }
-

@@ -1,27 +1,25 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Inter_Tight } from 'next/font/google'
+import { Geist, Geist_Mono } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
 import { Providers } from './providers'
 import { themeInitScript } from '@/lib/theme'
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
+const geist = Geist({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-geist',
   display: 'swap',
 })
 
-const interTight = Inter_Tight({
-  subsets: ['latin'],
-  variable: '--font-inter-tight',
+const geistMono = Geist_Mono({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-geist-mono',
   display: 'swap',
-  weight: ['600', '700', '800'],
 })
 
 export const metadata: Metadata = {
-  title: 'Mantis — Master medicine, competitively',
-  description:
-    'QBank, Battle Mode, and Flashcards for medical students. Practice, compete, and retain — in one premium experience.',
+  title: 'Mantis',
+  description: 'Question bank, quiz battles and flashcards for NEET-PG and INI-CET.',
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -33,7 +31,10 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#14161a',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F7F6F2' },
+    { media: '(prefers-color-scheme: dark)', color: '#1A1C24' },
+  ],
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -42,7 +43,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${interTight.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="min-h-svh">
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInitScript}

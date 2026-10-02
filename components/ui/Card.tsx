@@ -5,22 +5,33 @@ import { cn } from '@/lib/utils'
 
 interface CardProps extends HTMLMotionProps<'div'> {
   interactive?: boolean
+  /** Recessed grey panel with no border, for secondary content. */
+  tone?: 'default' | 'sunken'
+  elevated?: boolean
+  /** @deprecated The design has no glass surfaces; ignored. */
   glass?: boolean
 }
 
-export function Card({ className, interactive = false, glass = false, children, ...props }: CardProps) {
+/** White card, 1px subtle border, 16px radius, no shadow at rest. */
+export function Card({
+  className,
+  interactive = false,
+  tone = 'default',
+  elevated = false,
+  glass: _glass,
+  children,
+  ...props
+}: CardProps) {
+  void _glass
   return (
     <motion.div
-      whileTap={interactive ? { scale: 0.97 } : undefined}
-      whileHover={interactive ? { y: -2 } : undefined}
-      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+      whileTap={interactive ? { scale: 0.995 } : undefined}
+      transition={{ duration: 0.12, ease: [0.2, 0.8, 0.2, 1] }}
       className={cn(
-        'rounded-[24px] border',
-        glass
-          ? 'glass border-white/10 dark:border-white/5'
-          : 'bg-white dark:bg-[var(--color-surface-dark-card)] border-[var(--color-surface-light-border)] dark:border-[var(--color-surface-dark-border)]',
-        'shadow-[var(--shadow-soft)] dark:shadow-[var(--shadow-soft-dark)]',
-        interactive && 'cursor-pointer',
+        'rounded-2xl border',
+        tone === 'sunken' ? 'bg-sunken border-transparent' : 'bg-surface border-line',
+        elevated && 'shadow-e1',
+        interactive && 'cursor-pointer transition-colors duration-[120ms] hover:border-line-3',
         className,
       )}
       {...props}
